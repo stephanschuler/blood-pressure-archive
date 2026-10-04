@@ -250,9 +250,54 @@ das alte Verfahren liest.
   beste (`7seg`) nur 62 %.
 - PaddleOCR liest am häufigsten still falsch; für Siebensegment-Ziffern ungeeignet.
 
+### Klassisch gehärtet: Kombination und Mehrdeutigkeitsprüfung
+
+Ohne KI. Zwei Raster-Ketten: grüne Taste und Displayränder, beide mit festem Ziffernraster.
+
+- **Kombination „ein Verfahren genügt":** liest eine Kette, gilt ihr Wert; lesen beide und
+  widersprechen sich, wird abgewiesen.
+- **Typische Fehler:** ein ausgeschaltetes Segment gilt als eingeschaltet (5→6, 6→8, 1→7), meist
+  durch Schattenkanten, Kabel oder Geistersegmente.
+- **Mehrdeutigkeitsprüfung** (in der App `segments.ts:decode`, Parameter `margin`): liegt das
+  Segment am nächsten an der Schwelle näher als `margin` × Schwelle, und ergäbe es umgeschaltet
+  ebenfalls eine gültige Ziffer, gilt das Feld als unsicher.
+
+| Abstand (`margin`) | gelesen (1.510) | Handerfassung (330): richtig / falsch |
+|--------------------|-----------------|---------------------------------------|
+| 0 (aus)            | 87,5 %          | 158 / 14                              |
+| 0,1                | 87,3 %          | 150 / 10                              |
+| 0,2                | 85,7 %          | 140 / 7                               |
+| 0,3                | 83,4 %          | 130 / 5                               |
+| 0,5                | 70,0 %          | 88 / 1                                |
+
+**Für die App:** unsichere Felder nicht abweisen, sondern vorbelegt und hervorgehoben in der
+Bestätigungsmaske zeigen. Dann bleibt die Lesequote bei 87,5 %, und die Hälfte der falschen Werte
+(bei 0,2) ist markiert statt still.
+
+### Fehlerfälle angesehen (14 still falsche Fotos)
+
+- **7× kleine Pulsziffern bei Dunkelheit:** ein Geistersegment überschreitet die Schwelle (6→8,
+  5→6, 0→8). Abhilfe: Schwelle der Pulszeile 0,5 statt 0,4 × stärkstes Segment (`segments.ts:RATIO`).
+  Gegenprobe außerhalb der Handerfassung: 20 Pulswerte ändern sich, 17 davon liegen danach näher an
+  der Tabelle, 3 weiter weg.
+- **5× Kabel oder Fingerschatten** über einer Ziffer (4→9, 3→8, 4→1, DIA 132 statt 93). Abhilfe
+  teilweise: Plausibilitätsregel SYS − DIA ≥ 15 (`segments.ts:plausible`). Rest bleibt; in der App hilft
+  der Vergleich mit den anderen Messpunkten derselben Messung.
+- **≥ 1× Tippfehler in der Handerfassung** (`20260113_065457.jpg`: Display zeigt DIA 93, erfasst 92).
+
+| Kombination beider Raster-Ketten                 | gelesen (1.510) | Handerfassung: richtig / falsch |
+|--------------------------------------------------|-----------------|---------------------------------|
+| vorher                                           | 87,5 %          | 159 / 13                        |
+| Pulsschwelle 0,5 + SYS − DIA ≥ 15                | 87,0 %          | 159 / 7                         |
+| zusätzlich Mehrdeutigkeitsprüfung 0,2            | 86,1 %          | 157 / 5                         |
+
+(Handerfassung mit korrigiertem Tippfehler.)
+
 ### Plausibilität und Bestätigung
 
-- Weiche Grenzen: systolisch 70–250, diastolisch 40–150, Puls 40–180, systolisch > diastolisch.
+- Plausibilität der Erkennung (`segments.ts:plausible`): SYS 70–250, DIA 40–150, Puls 40–180,
+  SYS − DIA ≥ 15. Ein Tripel außerhalb verwirft die Erkennung ganz; von Hand ist jeder zwei- bis
+  dreistellige Wert möglich.
 - **Bestätigungsmaske ist Pflicht:** Display-Ausschnitt neben drei editierbaren Feldern,
   unplausible Felder hervorgehoben, Speichern erst nach Bestätigung.
 

@@ -20,6 +20,13 @@ services:
       - .:/work
       - npm-arm:/root/.npm
 
+  # PNGs aus SVG: App-Icons und Ladeanimation (app/assets/svg/).
+  svg:
+    build: { context: buildenv, dockerfile: svg.Dockerfile }
+    image: blutdruck-svg
+    volumes:
+      - .:/work
+
   # Archivtest: Fotos verkleinern und Ergebnisse auswerten (ocr-prototyp/).
   ocr:
     build: ocr-prototyp

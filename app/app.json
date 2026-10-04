@@ -4,17 +4,34 @@
     "slug": "blood-pressure-archive",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "de.g4n.bloodpressurearchive"
     },
     "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#263238",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
       "predictiveBackGestureEnabled": false,
       "package": "de.g4n.bloodpressurearchive"
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#263238"
+        }
+      ]
     ]
   }
 }

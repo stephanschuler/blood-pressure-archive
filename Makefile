@@ -8,7 +8,7 @@ PARTS   := 12
 LAN_IP  ?= $(shell ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
 export LAN_IP
 
-.PHONY: help images install apk serve-apk lan-ip typecheck test test-archiv klein
+.PHONY: help images install icons apk serve-apk lan-ip typecheck test test-archiv klein
 
 help: ## Befehle anzeigen
 	@awk -F':.*## ' '/^[a-z-]+:.*## / { printf "  make %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -18,6 +18,9 @@ images: ## Docker-Images bauen
 
 install: ## npm-Abhängigkeiten der App installieren
 	$(ANDROID) npm ci
+
+icons: ## App-Icons und Ladeanimation aus app/assets/svg/ als PNG erzeugen
+	$(COMPOSE) run --rm svg sh /work/buildenv/icons.sh
 
 apk: ## Release-APK bauen: app/dist/blutdruck.apk
 	$(ANDROID) /work/buildenv/build-apk.sh

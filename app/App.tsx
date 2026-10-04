@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Appearance, BackHandler, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Alert, Animated, Appearance, BackHandler, Easing, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMesspunkt, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
@@ -88,8 +88,8 @@ function Main() {
           <Bestaetigung key={offen.foto.uri} offen={offen} rest={queue.length - 1} onDone={next} c={c} />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color={c.button} />
-            <Text style={{ color: c.sub, marginTop: 8 }}>Erkenne …</Text>
+            <Loader />
+            <Text style={{ color: c.sub, marginTop: 12 }}>Erkenne …</Text>
           </View>
         )}
         <StatusBar style="auto" />
@@ -188,5 +188,33 @@ function Button({ label, onPress, disabled, c }: { label: string; onPress: () =>
     <Pressable onPress={onPress} disabled={disabled} style={{ flex: 1, backgroundColor: c.button, borderRadius: 8, padding: 14, alignItems: 'center', opacity: disabled ? 0.4 : 1 }}>
       <Text style={{ color: '#fff', fontSize: 16 }}>{label}</Text>
     </Pressable>
+  );
+}
+
+// Läuft über den nativen Treiber, weil die Erkennung den JS-Thread blockiert.
+// Maße aus assets/svg/loader-*.svg: 512er Raster auf 128 dp, Schlagabstand 230.
+function Loader() {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true }));
+    a.start();
+    return () => a.stop();
+  }, [t]);
+  const layer = { position: 'absolute', width: 128, height: 128 } as const;
+  return (
+    <View style={{ width: 128, height: 128, borderRadius: 28, overflow: 'hidden', backgroundColor: '#263238' }}>
+      <Image source={require('./assets/loader-herz.png')} style={layer} />
+      <Animated.Image
+        source={require('./assets/loader-puls.png')}
+        style={[layer, { width: 192, transform: [{ translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, -57.5] }) }] }]}
+      />
+      <Image source={require('./assets/loader-viewfinder.png')} style={layer} />
+      <Animated.View
+        style={{
+          position: 'absolute', left: 35.5, top: 35.5, width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#E53946',
+          opacity: t.interpolate({ inputRange: [0, 0.6, 0.61, 1], outputRange: [1, 1, 0.15, 0.15] }),
+        }}
+      />
+    </View>
   );
 }

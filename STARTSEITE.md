@@ -88,6 +88,11 @@ stehenden Kopf.
 `Oktober 2026` fett mit roter Linie darunter (Herz-Rot `#E53946`). Er haftet beim Scrollen
 unter dem stehenden Kopf, bis der nächste Monat ihn verdrängt.
 
+Rechts trägt er ein Kalendersymbol. **Antippen** öffnet den Datumswähler des Systems, vorbelegt
+mit dem obersten sichtbaren Tag, begrenzt auf älteste Messung bis heute. Nach der Wahl springt die
+Liste zu dem Tag, er leuchtet kurz rot auf. Hat der Tag keine Messung, springt sie zum nächstälteren
+und zeigt unten knapp drei Sekunden: `Keine Messung am 14.05.2024, nächste davor: Mo 13.05.2024`.
+
 ### 6. Wochenzeile
 
 Vor dem ersten Tag jeder Kalenderwoche, nicht aufklappbar:
@@ -118,6 +123,23 @@ Eine Zeile:
 der Hinweis „Messpunkt lange drücken zum Löschen“. **Langes Drücken** auf einen Messpunkt fragt wie
 bisher nach und löscht ihn. Mehrere Messungen dürfen zugleich aufgeklappt sein. Zu Beginn ist keine
 aufgeklappt.
+
+### 9. Kurvenleiste
+
+Senkrechte Leiste am rechten Bildschirmrand, 40 dp breit, neben der Liste; die Liste rückt dafür
+ein.
+
+- **Inhalt:** SYS und DIA als Kurve der Wochenmittel über die ganze Zeit, oben heute, unten die
+  älteste Messung, linear in der Zeit. Gestrichelt 80 und 140 mmHg, waagerechte Linien an jedem
+  Jahreswechsel mit `’25` darunter. Die Auswahl der Tageshälfte filtert auch hier.
+- **Ausschnitt:** ein rotes Band markiert die sichtbaren Tage, mindestens 6 dp hoch, am linken Rand
+  ein roter Griff. Scrollt die Liste, ist der Griff voll sichtbar, sonst halb durchsichtig.
+- **Antippen und Ziehen:** springt zum Tag unter dem Finger, ohne Messung zum nächstälteren.
+  Solange der Finger liegt, ist die Leiste 136 dp breit und überdeckt die Wertspalten: Beschriftung
+  80/140, Jahreszahlen ausgeschrieben. Links davon eine rote Blase mit Monat, Ø SYS/DIA und Zahl
+  der Messungen des Monats.
+- **Haptik:** ein kurzer Tick bei jedem Monatswechsel unter dem Finger.
+- **Bedienungshilfe:** einstellbares Element „Zeitleiste“; hoch und runter wechselt den Monat.
 
 ## Symbole der Tageshälften
 

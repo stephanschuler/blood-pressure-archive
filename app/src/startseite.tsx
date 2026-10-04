@@ -1,11 +1,13 @@
 // Übersicht der Messungen, Aufbau nach STARTSEITE.md.
-import { Fragment, useState } from 'react';
-import { Pressable, SectionList, Text, View } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import * as Haptics from 'expo-haptics';
+import { Fragment, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Animated, PanResponder, Platform, Pressable, SectionList, Text, View, type ViewToken } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
-  AUSWAHL, filtern, gliedern, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, zeitpunkt, zwischen,
-  type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
+  AUSWAHL, filtern, gliedern, mittel, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt, zwischen,
+  type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
 import { getSetting, setSetting } from './db';
 import type { Messpunkt, Messung } from './messung';
@@ -25,15 +27,62 @@ const uhr = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 // Wochenzeile und Spaltenkopf richten sich danach aus.
 const BLATT = 36;
 const VOR_WERTEN = BLATT + 10 + 12 + 6 + 16 + 6 + 42;
+// Kurvenleiste am rechten Rand; berührt wird sie breit und überdeckt die Wertspalten
+const LEISTE = 40;
+const LEISTE_BREIT = 136;
+
+type Sichtbar = (oben: Date, unten: Date) => void;
 
 export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c: Colors; onDelete: (p: Messpunkt) => void }) {
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
   const [offen, setOffen] = useState(new Set<number>());
+  const [markiert, setMarkiert] = useState<number | null>(null);
+  const [hinweis, setHinweis] = useState<string | null>(null);
+  const ms = useMemo(() => filtern(messungen, auswahl), [messungen, auswahl]);
+  const abschnitte = useMemo(() => gliedern(ms), [ms]);
+  const liste = useRef<SectionList<Woche | Tag, Abschnitt>>(null);
+  const ziel = useRef({ d: new Date(), versuche: 0 });
+  const oben = useRef(new Date());
+  const sichtbar = useRef<Sichtbar>(undefined);
+  const zeitgeber = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => zeitgeber.current.forEach(clearTimeout), []);
+  const spaeter = (f: () => void, ms: number) => zeitgeber.current.push(setTimeout(f, ms));
+  // SectionList verlangt eine Funktion, die sich über die Lebensdauer nicht ändert
+  const meldeSichtbar = useRef(({ viewableItems }: { viewableItems: ViewToken<Woche | Tag>[] }) => {
+    const tage = viewableItems.flatMap((v) => (v.item?.art === 'tag' ? [v.item.tag] : []));
+    if (!tage.length) return;
+    oben.current = tage[0];
+    sichtbar.current?.(tage[0], tage[tage.length - 1]);
+  }).current;
   if (!messungen.length) return <Text style={{ flex: 1, color: c.sub }}>Noch keine Messungen.</Text>;
 
   const heute = new Date();
-  const ms = filtern(messungen, auswahl);
   const sieben = siebenTage(ms, heute);
+  const aeltester = (abschnitte.at(-1)?.data.at(-1) as Tag | undefined)?.tag;
+
+  const springen = (d: Date, versuche = 0) => {
+    ziel.current = { d, versuche };
+    const z = tagSuchen(abschnitte, d);
+    if (z) liste.current?.scrollToLocation({ sectionIndex: z.sectionIndex, itemIndex: z.itemIndex, viewOffset: 0, animated: false });
+    return z?.tag;
+  };
+  const datumWaehlen = () =>
+    DateTimePickerAndroid.open({
+      value: oben.current,
+      mode: 'date',
+      minimumDate: aeltester,
+      maximumDate: heute,
+      onChange: (e, d) => {
+        if (e.type !== 'set' || !d) return;
+        const tag = springen(d);
+        if (!tag) return;
+        setMarkiert(tag.tag.getTime());
+        spaeter(() => setMarkiert(null), 1900);
+        if (tag.tag.getTime() === tagesbeginn(d).getTime()) return;
+        setHinweis(`Keine Messung am ${datum(d)}${d.getFullYear()}, nächste davor: ${WOCHENTAG[tag.tag.getDay()]} ${datum(tag.tag)}${tag.tag.getFullYear()}`);
+        spaeter(() => setHinweis(null), 2800);
+      },
+    });
   const waehlen = (a: Auswahl) => {
     setSetting('tageshaelfte', a);
     setAuswahl(a);
@@ -64,26 +113,53 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
       </View>
       <Kennzahl auswahl={auswahl} mittel={sieben.mittel} vorwoche={sieben.vorwoche} c={c} />
       <Diagramm ms={ms} heute={heute} c={c} />
-      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
+      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingRight: LEISTE + 6 - 16, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
         {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
       </View>
-      <SectionList
-        style={{ flex: 1 }}
-        sections={gliedern(ms)}
-        stickySectionHeadersEnabled
-        extraData={offen}
-        keyExtractor={(z) => `${z.art}${(z.art === 'woche' ? z.von : z.tag).getTime()}`}
-        renderSectionHeader={({ section }) => (
-          <Text style={{ backgroundColor: c.bg, color: c.text, fontWeight: '700', paddingTop: 8, paddingBottom: 4, borderBottomWidth: 2, borderColor: ROT }}>
-            {MONAT_LANG[section.monat.getMonth()]} {section.monat.getFullYear()}
-          </Text>
+      {/* reicht bis an den Bildschirmrand: App.tsx rückt um 16 ein */}
+      <View style={{ flex: 1, marginRight: -16 }}>
+        <SectionList
+          ref={liste}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingRight: LEISTE + 6 }}
+          sections={abschnitte}
+          stickySectionHeadersEnabled
+          extraData={[offen, markiert]}
+          keyExtractor={(z) => `${z.art}${(z.art === 'woche' ? z.von : z.tag).getTime()}`}
+          onViewableItemsChanged={meldeSichtbar}
+          // Ziel noch nicht vermessen: grob dorthin, dann genau
+          onScrollToIndexFailed={(info) => {
+            liste.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+            const { d, versuche } = ziel.current;
+            if (versuche < 3) setTimeout(() => ziel.current.d === d && springen(d, versuche + 1), 50);
+          }}
+          renderSectionHeader={({ section }) => (
+            <Pressable
+              onPress={datumWaehlen}
+              accessibilityRole="button"
+              accessibilityHint="Datum wählen"
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.bg, paddingTop: 8, paddingBottom: 4, borderBottomWidth: 2, borderColor: ROT }}
+            >
+              <Text style={{ flex: 1, color: c.text, fontWeight: '700' }}>{MONAT_LANG[section.monat.getMonth()]} {section.monat.getFullYear()}</Text>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={ROT} strokeWidth={2} strokeLinecap="round">
+                <Rect x={3} y={5} width={18} height={16} rx={2} />
+                <Path d="M3 10h18M8 3v4M16 3v4" />
+              </Svg>
+            </Pressable>
+          )}
+          renderItem={({ item }) =>
+            item.art === 'woche'
+              ? <Wochenzeile w={item} c={c} />
+              : <Tageszeile tag={item} bezug={sieben.mittel} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onDelete={onDelete} c={c} />}
+          ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
+        />
+        {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} c={c} />}
+        {hinweis && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: LEISTE + 10, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
+            <Text style={{ color: '#fff', fontSize: 13 }}>{hinweis}</Text>
+          </View>
         )}
-        renderItem={({ item }) =>
-          item.art === 'woche'
-            ? <Wochenzeile w={item} c={c} />
-            : <Tageszeile tag={item} bezug={sieben.mittel} offen={offen} onToggle={umschalten} onDelete={onDelete} c={c} />}
-        ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
-      />
+      </View>
     </View>
   );
 }
@@ -208,11 +284,18 @@ function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
   );
 }
 
-type TagProps = { tag: Tag; bezug: Werte | null; offen: Set<number>; onToggle: (m: Messung) => void; onDelete: (p: Messpunkt) => void; c: Colors };
+type TagProps = { tag: Tag; bezug: Werte | null; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onDelete: (p: Messpunkt) => void; c: Colors };
 
-function Tageszeile({ tag, bezug, offen, onToggle, onDelete, c }: TagProps) {
+function Tageszeile({ tag, bezug, offen, markiert, onToggle, onDelete, c }: TagProps) {
+  const leuchten = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!markiert) return;
+    leuchten.setValue(1);
+    Animated.timing(leuchten, { toValue: 0, duration: 1800, useNativeDriver: false }).start();
+  }, [markiert, leuchten]);
+  const hinterlegt = leuchten.interpolate({ inputRange: [0, 1], outputRange: ['rgba(229,57,70,0)', 'rgba(229,57,70,0.4)'] });
   return (
-    <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: 1, borderColor: c.line }}>
+    <Animated.View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: 1, borderColor: c.line, backgroundColor: hinterlegt }}>
       <Kalenderblatt d={tag.tag} c={c} />
       <View style={{ flex: 1 }}>
         {tag.messungen.map((m) => {
@@ -243,6 +326,133 @@ function Tageszeile({ tag, bezug, offen, onToggle, onDelete, c }: TagProps) {
           );
         })}
       </View>
-    </View>
+    </Animated.View>
+  );
+}
+
+const ticken = () =>
+  (Platform.OS === 'android' ? Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Tick) : Haptics.selectionAsync()).catch(() => {});
+const monatsnummer = (d: Date) => d.getFullYear() * 12 + d.getMonth();
+
+type LeisteProps = { abschnitte: Abschnitt[]; von: Date; heute: Date; sichtbar: RefObject<Sichtbar | undefined>; onZiel: (d: Date) => Tag | undefined; c: Colors };
+
+/** Wochenmittel über die ganze Zeit, oben heute; zeigt den sichtbaren Ausschnitt, Antippen und Ziehen springt. */
+function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeisteProps) {
+  const [hoehe, setHoehe] = useState(0);
+  const [breit, setBreit] = useState(false);
+  const [aktiv, setAktiv] = useState(false);
+  const [bereich, setBereich] = useState<[Date, Date]>([heute, heute]);
+  const [blase, setBlase] = useState<{ y: number; titel: string; text: string } | null>(null);
+  const wochen = useMemo(() => abschnitte.flatMap((a) => a.data.filter((z): z is Woche => z.art === 'woche')), [abschnitte]);
+  const monat = useRef(-1);
+  const start = useRef(0);
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    sichtbar.current = (oben, unten) => {
+      setBereich([oben, unten]);
+      setAktiv(true);
+      clearTimeout(t);
+      t = setTimeout(() => setAktiv(false), 1500);
+    };
+    return () => {
+      clearTimeout(t);
+      sichtbar.current = undefined;
+    };
+  }, [sichtbar]);
+
+  const spanne = Math.max(1, heute.getTime() - von.getTime());
+  const y = (d: Date) => Math.min(Math.max((heute.getTime() - d.getTime()) / spanne, 0), 1) * hoehe;
+
+  const ziehen = (py: number) => {
+    const d = new Date(heute.getTime() - (Math.min(Math.max(py, 0), hoehe) / hoehe) * spanne);
+    const tag = onZiel(d);
+    if (!tag) return;
+    setBereich([tag.tag, tag.tag]);
+    const k = monatsnummer(tag.tag);
+    if (k !== monat.current) {
+      monat.current = k;
+      ticken();
+    }
+    const tage = abschnitte.find((a) => monatsnummer(a.monat) === k)!.data.flatMap((z) => (z.art === 'tag' ? z.messungen : []));
+    const m = mittel(tage)!;
+    setBlase({ y: Math.min(Math.max(py, 24), hoehe - 24), titel: `${MONAT_LANG[tag.tag.getMonth()]} ${tag.tag.getFullYear()}`, text: `Ø ${m.sys}/${m.dia} · ${tage.length} Mess.` });
+  };
+  // PanResponder entsteht einmal; ziehen dagegen hängt an Höhe und Daten des letzten Renderns
+  const aktuell = useRef(ziehen);
+  aktuell.current = ziehen;
+  const loslassen = () => {
+    setBreit(false);
+    setBlase(null);
+  };
+  const pan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: (e) => {
+      start.current = e.nativeEvent.locationY;
+      monat.current = -1;
+      setBreit(true);
+      aktuell.current(start.current);
+    },
+    onPanResponderMove: (_, g) => aktuell.current(start.current + g.dy),
+    onPanResponderRelease: loslassen,
+    onPanResponderTerminate: loslassen,
+  })).current;
+
+  const w = breit ? LEISTE_BREIT : LEISTE;
+  const links = breit ? 6 : 3;
+  const rechts = w - (breit ? 30 : 3);
+  const x = (v: number) => links + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (rechts - links);
+  const jahre: number[] = [];
+  for (let j = von.getFullYear() + 1; j <= heute.getFullYear(); j++) jahre.push(j);
+  const bandOben = y(bereich[0]);
+  const bandHoehe = Math.max(6, y(bereich[1]) - bandOben);
+  const oben = bereich[0];
+
+  return (
+    <>
+      <View
+        {...pan.panHandlers}
+        onLayout={(e) => setHoehe(e.nativeEvent.layout.height)}
+        accessibilityLabel="Zeitleiste"
+        accessibilityRole="adjustable"
+        accessibilityValue={{ text: `${MONAT_LANG[oben.getMonth()]} ${oben.getFullYear()}` }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(e) => onZiel(new Date(oben.getFullYear(), oben.getMonth() + (e.nativeEvent.actionName === 'increment' ? 2 : 0), 0))}
+        style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: w, backgroundColor: c.bg, borderLeftWidth: breit ? 0 : 1, borderColor: c.line, elevation: breit ? 6 : 0 }}
+      >
+        {hoehe > 0 && (
+          <Svg width={w} height={hoehe}>
+            {[80, 140].map((v) => (
+              <Fragment key={v}>
+                <Line x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />
+                {breit && <SvgText x={x(v) + 3} y={hoehe - 4} fontSize={9} fill={c.sub}>{v}</SvgText>}
+              </Fragment>
+            ))}
+            {(['sys', 'dia'] as const).map((k) => (
+              <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={breit ? 1.4 : 1.1} />
+            ))}
+            {breit && <SvgText x={w - 3} y={13} fontSize={11} fontWeight="700" fill={c.text} textAnchor="end">{heute.getFullYear()}</SvgText>}
+            {jahre.map((j) => (
+              <Fragment key={j}>
+                <Line x1={0} x2={w} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
+                {breit
+                  ? <SvgText x={w - 3} y={y(new Date(j, 0, 1)) + 13} fontSize={11} fontWeight="700" fill={c.text} textAnchor="end">{j - 1}</SvgText>
+                  : <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>}
+              </Fragment>
+            ))}
+          </Svg>
+        )}
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: bandOben, height: bandHoehe, backgroundColor: 'rgba(229,57,70,0.2)', borderTopWidth: 1, borderBottomWidth: 1, borderColor: ROT }} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: -9, width: 18, height: 28, borderRadius: 9, backgroundColor: ROT, top: bandOben + bandHoehe / 2 - 14, opacity: breit || aktiv ? 1 : 0.55, elevation: 2 }} />
+      </View>
+      {blase && (
+        <View pointerEvents="none" style={{ position: 'absolute', right: LEISTE_BREIT + 12, top: blase.y - 22, backgroundColor: ROT, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 12, elevation: 4 }}>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{blase.titel}</Text>
+          <Text style={{ color: '#fff', fontSize: 11 }}>{blase.text}</Text>
+        </View>
+      )}
+    </>
   );
 }

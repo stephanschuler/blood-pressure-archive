@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { filtern, gliedern, kalenderwoche, mittel, parseAuswahl, siebenTage, tageshaelfte, type Tag, type Woche } from '../src/auswertung';
+import { filtern, gliedern, kalenderwoche, mittel, parseAuswahl, siebenTage, tageshaelfte, tagSuchen, type Tag, type Woche } from '../src/auswertung';
 import type { Messung } from '../src/messung';
 
 let id = 0;
@@ -63,4 +63,18 @@ test('Gliederung: Monate, Wochenzeile nur einmal je Woche, Tage mit ihren Messun
   const kw40 = g[0].data[0] as Woche;
   assert.deepEqual([kw40.anzahl, kw40.mittel.sys, kw40.vorwoche!.sys], [3, 130, 100]);
   assert.equal((g[1].data[1] as Woche).vorwoche, null);
+});
+
+test('Tag suchen: der Tag selbst, sonst der nächstältere, außerhalb der jüngste bzw. älteste', () => {
+  const g = gliedern([m(am(10, 1, 20), 140), m(am(9, 30, 7), 120), m(am(9, 27, 7), 100)]);
+  const wo = (d: Date) => {
+    const z = tagSuchen(g, d)!;
+    return [z.sectionIndex, z.itemIndex, z.tag.tag.getDate()];
+  };
+  assert.deepEqual(wo(am(10, 1, 23)), [0, 1, 1]);
+  assert.deepEqual(wo(am(10, 4)), [0, 1, 1]);
+  assert.deepEqual(wo(am(9, 29)), [1, 2, 27]);
+  assert.deepEqual(wo(am(9, 30)), [1, 0, 30]);
+  assert.deepEqual(wo(am(1, 1)), [1, 2, 27]);
+  assert.equal(tagSuchen([], am(10, 1)), undefined);
 });

@@ -6,6 +6,8 @@ import { Alert, Appearance, BackHandler } from 'react-native';
 import type { Reading } from '../src/erkennung/messwerte';
 import type { Foto } from '../src/foto';
 
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+
 import App from '../App';
 import * as db from '../src/db';
 import * as fotoModule from '../src/foto';
@@ -21,6 +23,7 @@ jest.mock('expo-sqlite', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn() }));
+jest.mock('@react-native-community/datetimepicker', () => ({ DateTimePickerAndroid: { open: jest.fn() } }));
 
 const foto = fotoModule as jest.Mocked<typeof fotoModule>;
 const FOTO: Foto = { uri: 'file:///cache/foto.jpg', zeit: new Date('2026-01-01T07:00:00Z'), zeitAusExif: false, temporaer: true };
@@ -228,4 +231,16 @@ test('gleiche Zeit, andere erkannte Werte: Bestätigung wie gewohnt', async () =
   await fireEvent.changeText(await screen.findByDisplayValue('123'), '128');
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen()[0].punkte).toHaveLength(1);
+});
+
+test('Monatskopf öffnet den Datumswähler; Tag ohne Messung: Sprung zum Tag davor mit Hinweis', async () => {
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 3, 7).toISOString(), sys: 140, dia: 90, puls: 70 });
+  await render(<App />);
+  expect(screen.getByLabelText('Zeitleiste')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByText('Januar 2026'));
+  const open = DateTimePickerAndroid.open as jest.Mock;
+  expect(open).toHaveBeenCalledTimes(1);
+  await act(() => open.mock.calls[0][0].onChange({ type: 'set' }, new Date(2026, 0, 2, 12)));
+  expect(screen.getByText('Keine Messung am 02.01.2026, nächste davor: Do 01.01.2026')).toBeOnTheScreen();
 });

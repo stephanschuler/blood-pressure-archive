@@ -90,3 +90,17 @@ export function gliedern(ms: Messung[]): Abschnitt[] {
   }
   return abschnitte;
 }
+
+/** Stelle des Tags `d` in der Gliederung; ohne Messung an `d` der nächstältere, vor der ersten Messung die älteste. */
+export function tagSuchen(abschnitte: Abschnitt[], d: Date) {
+  const ziel = tagesbeginn(d).getTime();
+  let letzter: { sectionIndex: number; itemIndex: number; tag: Tag } | undefined;
+  for (const [sectionIndex, a] of abschnitte.entries()) {
+    for (const [itemIndex, z] of a.data.entries()) {
+      if (z.art !== 'tag') continue;
+      letzter = { sectionIndex, itemIndex, tag: z };
+      if (z.tag.getTime() <= ziel) return letzter;
+    }
+  }
+  return letzter;
+}

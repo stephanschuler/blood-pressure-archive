@@ -314,12 +314,13 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 
 - Eingabe wie in der App: Foto EXIF-gedreht, lange Seite 1.200 px, JPEG. In der App verkleinert
   `expo-image-manipulator` (Glide wendet die EXIF-Drehung an), `jpeg-js` dekodiert.
-- **Eigener Thread:** Dekodieren und Lesen laufen in einer Runtime von `react-native-worklets`
+- **Eigene Threads:** Dekodieren und Lesen laufen in Runtimes von `react-native-worklets`
   0.10.1 (Bundle Mode, experimentell), nicht im JS-Thread. Im JS-Thread hing die Oberfläche, solange
   weitere Fotos im Voraus erkannt wurden. Hermes kennt keine Web Worker; die übrigen Thread-Pakete
   (`react-native-threads`, `react-native-multithreading`) sind seit 2022 tot, `react-native-worklets-core`
   hat keinen Bundle Mode und verlangt `'worklet'` in jeder Funktion, auch in `jpeg-js`.
   Einrichtung: `app/babel.config.js`, `app/metro.config.js`, Metro-Patch in `app/patches/`.
+  Drei Runtimes lesen parallel (`RUNTIMES` in `app/src/foto.ts`), verkleinert wird nacheinander.
   Fallstricke: `.claude/rules/erkennung-worklet-runtime.md`.
 - Messung am Archiv (`make test-archiv`, 4.10.2026):
 

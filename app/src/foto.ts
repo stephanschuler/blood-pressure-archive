@@ -1,17 +1,35 @@
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { createWorkletRuntime, runOnRuntimeAsync } from 'react-native-worklets';
+import { createWorkletRuntime, runOnRuntimeAsync, type WorkletRuntime } from 'react-native-worklets';
 
 import { decodeJpeg } from './erkennung/image';
 import { readValues, type Reading } from './erkennung/messwerte';
 import { exifTime } from './exif';
 
-// eigener Thread: die Erkennung blockiert sonst den JS-Thread und damit die Oberfläche
-const erkennung = createWorkletRuntime('erkennung');
+// Je Runtime ein eigener Thread: die Erkennung blockiert sonst den JS-Thread und damit die
+// Oberfläche. Das S22 hat 1 großen, 3 mittlere und 4 kleine Kerne; Stellschraube für den Durchsatz.
+const RUNTIMES = 3;
+const frei: WorkletRuntime[] = [];
+const wartend: ((r: WorkletRuntime) => void)[] = [];
+let angelegt = 0;
 
-// Summen in ms seit App-Start; ermittelt, wo die Zeit je Foto auf dem Handy bleibt
-const zeiten = { fotos: 0, verkleinern: 0, umweg: 0, dekodieren: 0, lesen: 0, gesamt: 0 };
+function belegen(): WorkletRuntime | Promise<WorkletRuntime> {
+  if (frei.length) return frei.pop()!;
+  if (angelegt < RUNTIMES) return createWorkletRuntime(`erkennung${angelegt++}`);
+  return new Promise((r) => wartend.push(r));
+}
+
+function freigeben(r: WorkletRuntime) {
+  const w = wartend.shift();
+  if (w) w(r);
+  else frei.push(r);
+}
+
+// Summen in ms seit App-Start; ermittelt, wo die Zeit je Foto auf dem Handy bleibt.
+// beschaeftigt: Zeit, in der mindestens ein Foto in Arbeit war; geteilt durch fotos der Durchsatz.
+const zeiten = { fotos: 0, verkleinern: 0, umweg: 0, dekodieren: 0, lesen: 0, gesamt: 0, beschaeftigt: 0 };
+let inArbeit = 0, seit = 0;
 
 export function messzeit(): string | null {
   const { fotos, ...summen } = zeiten;
@@ -24,6 +42,7 @@ export function messzeit(): string | null {
     `Dekodieren ${s(summen.dekodieren)}`,
     `Lesen ${s(summen.lesen)}`,
     `Gesamt ${s(summen.gesamt)}`,
+    `Durchsatz ${s(summen.beschaeftigt)} je Foto (${RUNTIMES} parallel)`,
   ].join('\n');
 }
 
@@ -50,8 +69,10 @@ export async function importPhotos(): Promise<Foto[]> {
   });
 }
 
-/** Foto verkleinern (lange Seite 1200 px, EXIF-Drehung angewendet) und Messwerte lesen. */
-export async function recognize(foto: Foto): Promise<Reading> {
+// nacheinander: das Original liegt beim Verkleinern in voller Größe im Speicher
+let verkleinert: Promise<unknown> = Promise.resolve();
+
+async function verkleinern(foto: Foto): Promise<Uint8Array> {
   const t0 = Date.now();
   const full = await ImageManipulator.manipulate(foto.uri).renderAsync();
   const size = full.width >= full.height ? { width: 1200 } : { height: 1200 };
@@ -62,23 +83,39 @@ export async function recognize(foto: Foto): Promise<Reading> {
   const bin = atob(saved.base64!);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const t2 = Date.now();
-  const r = await runOnRuntimeAsync(erkennung, (b: Uint8Array) => {
-    'worklet';
-    const a = Date.now();
-    const img = decodeJpeg(b);
-    const m = Date.now();
-    return { reading: readValues(img), dekodieren: m - a, lesen: Date.now() - m };
-  }, bytes);
-  zeiten.fotos++;
   zeiten.verkleinern += t1 - t0;
-  zeiten.umweg += t2 - t1;
-  zeiten.dekodieren += r.dekodieren;
-  zeiten.lesen += r.lesen;
-  zeiten.gesamt += Date.now() - t0;
-  return r.reading;
+  zeiten.umweg += Date.now() - t1;
+  return bytes;
 }
 
+/**
+ * Foto verkleinern (lange Seite 1200 px, EXIF-Drehung angewendet) und Messwerte lesen. Höchstens
+ * RUNTIMES Fotos zugleich, in Reihenfolge der Aufrufe.
+ */
+export async function recognize(foto: Foto): Promise<Reading> {
+  const runtime = await belegen();
+  const t0 = Date.now();
+  if (!inArbeit++) seit = t0;
+  try {
+    const p = verkleinert.then(() => verkleinern(foto));
+    verkleinert = p.catch(() => {});
+    const r = await runOnRuntimeAsync(runtime, (b: Uint8Array) => {
+      'worklet';
+      const a = Date.now();
+      const img = decodeJpeg(b);
+      const m = Date.now();
+      return { reading: readValues(img), dekodieren: m - a, lesen: Date.now() - m };
+    }, await p);
+    zeiten.fotos++;
+    zeiten.dekodieren += r.dekodieren;
+    zeiten.lesen += r.lesen;
+    zeiten.gesamt += Date.now() - t0;
+    return r.reading;
+  } finally {
+    if (!--inArbeit) zeiten.beschaeftigt += Date.now() - seit;
+    freigeben(runtime);
+  }
+}
 export function discard(foto: Foto) {
   if (foto.temporaer) {
     const f = new File(foto.uri);

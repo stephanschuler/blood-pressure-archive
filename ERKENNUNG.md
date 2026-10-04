@@ -9,8 +9,8 @@ stehen absichtlich keine Messwerte, keine Fotonamen und keine Datum-Wert-Paare, 
 ## 1. Kurzfassung
 
 Die App liest das Display des Medisana-Messgeräts klassisch, ohne trainierte KI und ohne
-Online-Dienst. Das Foto wird auf 1.200 px lange Seite verkleinert und in einer eigenen
-Worklet-Runtime dekodiert, damit die Oberfläche bedienbar bleibt. Zwei unabhängige Wege suchen
+Online-Dienst. Das Foto wird auf 1.200 px lange Seite verkleinert und in eigenen Worklet-Runtimes
+dekodiert, bis zu drei Fotos zugleich, damit die Oberfläche bedienbar bleibt. Zwei unabhängige Wege suchen
 das Display und entzerren es auf 330 × 400 px: über die grüne START/STOP-Taste und über die
 Displayränder (Kantenvierecke, bewertet nach der Zahl ziffernartiger Flecken). In beiden
 entzerrten Bildern misst ein festes Ziffernraster je Siebensegment-Segment, wie viel dunkler es
@@ -364,7 +364,7 @@ Wert: 171 richtig, 8 falsch, davon 4 als unsicher markiert.
 Foto (Kamera oder Galerie)
   │ foto.ts:recognize            expo-image-manipulator: EXIF-Drehung, lange Seite 1.200 px, JPEG 0,92
   │                              Base64 → Uint8Array
-  ▼ runOnRuntimeAsync(erkennung) ── eigene Worklet-Runtime ──────────────────────────────────
+  ▼ runOnRuntimeAsync(…) ── eine von bis zu drei Worklet-Runtimes ──────────────────────────
   │ image.ts:decodeJpeg          jpeg-js → RGB
   │ messwerte.ts:readValues
   │   ├─ display.ts:viaButton    grüne Taste → grober Ausschnitt → Glaskanten → 330×400
@@ -383,8 +383,9 @@ Reading { values: [sys, dia, puls] | null, uncertain: [bool, bool, bool] }
 - `ImageManipulator.manipulate(uri).renderAsync()` lädt das Bild; laut `TECHNOLOGIE.md` wendet
   Glide dabei die EXIF-Drehung an. Danach `resize` auf 1.200 px an der langen Seite und
   `saveAsync` als JPEG (`compress: 0.92`, Base64). Die Zwischendatei wird sofort gelöscht.
-- Base64 → `Uint8Array`, Übergabe an die Runtime `erkennung` (`createWorkletRuntime`), dort
-  `decodeJpeg` (`jpeg-js`, `formatAsRGBA: false`) und `readValues`.
+- Base64 → `Uint8Array`, Übergabe an eine freie Runtime (`belegen`, bis `RUNTIMES` = 3, angelegt
+  bei Bedarf mit `createWorkletRuntime`), dort `decodeJpeg` (`jpeg-js`, `formatAsRGBA: false`) und
+  `readValues`.
 - Der Archivtest bekommt dieselbe Eingabeform über `export_klein.py` (PIL: `exif_transpose`,
   `thumbnail(1200)`, Qualität 92).
 
@@ -513,13 +514,13 @@ Messrichtung quer dazu fest.
 
 ### 3.11 Wo es läuft und wie lange
 
-- **Worklet-Runtime** `erkennung` von `react-native-worklets` 0.10.1 im Bundle Mode. Einrichtung:
-  `app/babel.config.js` (`bundleMode: true`, `strictGlobal: true`,
+- **Worklet-Runtimes** `erkennung0`–`erkennung2` von `react-native-worklets` 0.10.1 im Bundle Mode.
+  Einrichtung: `app/babel.config.js` (`bundleMode: true`, `strictGlobal: true`,
   `importForwarding.relativePaths: ['src/foto.ts']`), `app/metro.config.js`
   (`getBundleModeMetroConfig`), Metro-Patch `app/patches/metro+0.84.5.patch` über `patch-package`.
 - **Fallstricke** (`.claude/rules/erkennung-worklet-runtime.md`): `src/erkennung/` importiert
   nichts aus `react-native` oder Expo (die Runtime lädt den Code ein zweites Mal); der Worklet
-  steht in `src/foto.ts`; Erkennung nacheinander (`App.tsx`, `lastReading`); Patch nach jedem
+  steht in `src/foto.ts`; Verkleinern nacheinander, Lesen höchstens `RUNTIMES` zugleich; Patch nach jedem
   Expo-Update prüfen.
 - **Laufzeit:**
 

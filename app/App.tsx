@@ -43,17 +43,11 @@ function Main() {
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
   const active = useRef<Foto | null>(null);
   const readings = useRef(new Map<Foto, Promise<Reading>>());
-  // nacheinander statt parallel: sonst liegen alle Fotos zugleich in voller Größe im Speicher
-  const lastReading = useRef<Promise<unknown>>(Promise.resolve());
-
   const recognizeOnce = (foto: Foto) => {
     let p = readings.current.get(foto);
     if (!p) {
-      p = lastReading.current
-        .then(() => recognize(foto))
-        .catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
+      p = recognize(foto).catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
       readings.current.set(foto, p);
-      lastReading.current = p;
     }
     return p;
   };

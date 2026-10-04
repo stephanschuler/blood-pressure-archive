@@ -208,6 +208,27 @@ um 1–2 falsche Werte; der schwere Testsatz ist mit 78 Fotos klein.
 - Das Gerät bestimmt die Tastensuche, nicht die Handerfassung: Dort steht bei schwach beleuchteten
   Medisana-Fotos oft die Vorbelegung „Beurer".
 
+### Mehrstufig: Display über seine Ränder (ohne grüne Taste)
+
+Stufe 1: Vierecke passender Größe und Form aus den Kanten des ganzen
+Bildes; gewählt wird das, dessen Entzerrung die meisten ziffernartigen Formen enthält. Stufe 2
+liest im entzerrten Display — entweder mit freier Ziffernsuche oder mit dem festen Ziffernraster
+des Medisana.
+
+| Kette (alle 1.510 Fotos)                     | gelesen | Handerfassung (330): richtig / falsch / abgewiesen |
+|----------------------------------------------|---------|----------------------------------------------------|
+| bisher: grüne Taste + Raster                 | 81,5 %  | 42 / 12 / 276                                      |
+| Stufe 1 + freie Ziffernsuche                 | 71,1 %  | 110 / 4 / 216                                      |
+| **Stufe 1 + festes Raster**                  | 85,0 %  | 159 / 12 / 159                                     |
+| mindestens eine der beiden Raster-Ketten     | 89,7 %  | –                                                  |
+
+- Stufe 1 findet ein Display auf 1.503 von 1.510 Fotos, auch bei schwachem Licht.
+- Die Handerfassung enthält absichtlich die Fotos, bei denen das alte Verfahren schwankte oder
+  verdächtig war; die Falsch-Zahlen dort sind deshalb höher als im Archivdurchschnitt.
+- Auf Fotos, die beide Raster-Ketten lesen, unterscheiden sie sich in 28 von 1.112 Fällen.
+- Freie Ziffernsuche scheitert vor allem an Geisterziffern (zusätzliche Stellen) und an
+  unbekannten Segmentmustern.
+
 ### Plausibilität und Bestätigung
 
 - Weiche Grenzen: systolisch 70–250, diastolisch 40–150, Puls 40–180, systolisch > diastolisch.

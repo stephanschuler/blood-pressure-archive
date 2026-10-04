@@ -38,8 +38,7 @@ Raster 512 × 512, Ursprung oben links.
 - **Startbildschirm:** Vordergrund des adaptiven Icons auf `#263238`, über `expo-splash-screen`.
 - **Ladeanimation** während der Erkennung: das Icon als Kachel mit 128 dp. Die Pulslinie läuft
   im Schnitt von rechts nach links, ein Schlag je Sekunde, zwischen den Schlägen flach. Der
-  Aufnahmepunkt blinkt im Takt. Sie läuft über den nativen Treiber, weil die Erkennung den
-  JS-Thread blockiert.
+  Aufnahmepunkt blinkt im Takt. Sie läuft über den nativen Treiber.
 
 ## Dateien
 

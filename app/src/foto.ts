@@ -1,10 +1,14 @@
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { createWorkletRuntime, runOnRuntimeAsync } from 'react-native-worklets';
 
 import { decodeJpeg } from './erkennung/image';
 import { readValues, type Reading } from './erkennung/messwerte';
 import { exifTime } from './exif';
+
+// eigener Thread: die Erkennung blockiert sonst den JS-Thread und damit die Oberfläche
+const erkennung = createWorkletRuntime('erkennung');
 
 export type Foto = {
   uri: string;
@@ -39,7 +43,10 @@ export async function recognize(foto: Foto): Promise<Reading> {
   const bin = atob(saved.base64!);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return readValues(decodeJpeg(bytes));
+  return runOnRuntimeAsync(erkennung, (b: Uint8Array) => {
+    'worklet';
+    return readValues(decodeJpeg(b));
+  }, bytes);
 }
 
 export function discard(foto: Foto) {

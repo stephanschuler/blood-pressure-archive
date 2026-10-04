@@ -39,9 +39,7 @@ function Main() {
   const recognizeOnce = (foto: Foto) => {
     let p = readings.current.get(foto);
     if (!p) {
-      // Erkennung blockiert den JS-Thread: vorher Anzeige und Eingaben zum Zug kommen lassen
       p = lastReading.current
-        .then(() => new Promise((r) => setTimeout(r, 50)))
         .then(() => recognize(foto))
         .catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
       readings.current.set(foto, p);
@@ -216,7 +214,6 @@ function IconButton({ label, icon, onPress }: { label: string; icon: number; onP
   );
 }
 
-// Läuft über den nativen Treiber, weil die Erkennung den JS-Thread blockiert.
 // Maße aus assets/svg/loader-*.svg: 512er Raster auf 128 dp, Schlagabstand 230.
 function Loader() {
   const t = useRef(new Animated.Value(0)).current;

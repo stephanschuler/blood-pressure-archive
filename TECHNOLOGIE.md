@@ -328,9 +328,9 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 | gelesen (1.510)                                  | 87,7 % (Python: 87,0 %)               |
 | Handerfassung (330): richtig / falsch            | 171 / 8, davon 4 als unsicher markiert |
 | beide lesen, gleicher Wert wie Python            | 1.289 von 1.291                       |
-| Zeit je Foto in Node (allein)                    | etwa 0,45 s                           |
-| Lesen je Foto unter Hermes, Mac (`make hermes`)  | 4,5 s                                 |
-| Lesen je Foto auf dem Galaxy S22                 | 8,0 s (dazu 1,0 s Verkleinern, Dekodieren) |
+| Zeit je Foto in Node (allein)                    | etwa 0,3 s                            |
+| Lesen je Foto unter Hermes, Mac (`make hermes`)  | 2,7 s (vor dem Umbau für Hermes 4,5 s) |
+| Lesen je Foto auf dem Galaxy S22, vor dem Umbau  | 8,0 s (dazu 1,0 s Verkleinern, Dekodieren) |
 
 - `make test-archiv` schlägt fehl unter 87,0 % gelesen oder bei mehr als 4 unmarkiert falschen
   Werten in der Handerfassung (`ocr-prototyp/auswertung_ts.py`).
@@ -341,6 +341,9 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 - `make test`: Unit-Tests mit künstlichen Daten (`app/tests/`), ohne Fotos; dürfen ins Repo.
 - Beschleunigt: Kantenfilter einmal für alle drei Schwellen (0,8 → 0,45 s, Ergebnis unverändert).
   Verworfen: Display-Kandidaten auf halber Auflösung (0,33 s, aber 84,3 % statt 87,7 % gelesen).
+- Beschleunigt für Hermes, Ergebnis bitgleich: `components`, `dilate3`, `close` (separabel),
+  `gaussianBlur`, `remap` ohne Funktionsaufruf, Objekt oder Destrukturierung je Pixel (4,5 → 2,7 s).
+  Verworfen: grüne Maske in `findButton` nur einmal berechnen (1 %, im Rauschen).
 
 ### Plausibilität und Bestätigung
 

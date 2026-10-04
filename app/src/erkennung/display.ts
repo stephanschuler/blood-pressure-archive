@@ -63,9 +63,10 @@ function cropRegion(img: Rgb, b: Button): Rgb {
   const m = [k * rot[0], k * rot[1], k * rot[2] + tx, k * rot[3], k * rot[4], k * rot[5] + ty];
   const det = m[0] * m[4] - m[1] * m[3];
   const w = Math.trunc((REGION[1] - REGION[0]) * UNIT), h = Math.trunc((REGION[3] - REGION[2]) * UNIT);
-  return remap(img, w, h, (x, y) => {
+  return remap(img, w, h, (x, y, s) => {
     const u = x - m[2], v = y - m[5];
-    return [(m[4] * u - m[1] * v) / det, (-m[3] * u + m[0] * v) / det];
+    s[0] = (m[4] * u - m[1] * v) / det;
+    s[1] = (-m[3] * u + m[0] * v) / det;
   });
 }
 

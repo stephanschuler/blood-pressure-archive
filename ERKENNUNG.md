@@ -525,9 +525,10 @@ Messrichtung quer dazu fest.
 
   | Umgebung | Zeit je Foto | Quelle |
   |----------|--------------|--------|
-  | Node, ein Foto allein, nach Beschleunigung | etwa 0,45 s | `TECHNOLOGIE.md`, `profil.ts` |
+  | Node, ein Foto allein | etwa 0,3 s | `TECHNOLOGIE.md`, `profil.ts` |
   | Node, Archivtest (12 Prozesse parallel laut `Makefile`) | Median 0,7 s, max. 1,4 s | Transkript ef0c017b |
-  | Handy (Hermes) | nicht gemessen | – |
+  | Hermes am Mac, nur Lesen (`make hermes`) | 2,7 s | `TECHNOLOGIE.md` |
+  | Galaxy S22, nur Lesen, vor dem Umbau für Hermes | 8,0 s, dazu 1,0 s Verkleinern und Dekodieren | `TECHNOLOGIE.md` |
 
 ### 3.12 Qualitätssicherung
 
@@ -574,7 +575,6 @@ fehlt ein Layout. `ANFORDERUNGEN.md` verlangt dagegen alle drei Geräte.
 
 ### Offen, nicht gemessen
 
-- **Laufzeit auf dem Handy** (Hermes ohne JIT): ungemessen.
 - **Skalierung im Handy gegen PIL:** Der Archivtest verkleinert mit PIL, die App mit
   `expo-image-manipulator`. Ob beide gleich genug sind, ist nicht geprüft.
 - **Bundle Mode ist experimentell;** der Metro-Patch gilt je Metro-Version.

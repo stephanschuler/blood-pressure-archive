@@ -1,5 +1,7 @@
 // Bildoperationen in reinem TypeScript, nach dem Vorbild der OpenCV-Funktionen des Python-Prototyps
 // (ocr-prototyp/). Läuft in der App (Hermes) und in Node.
+// Hermes hat keinen JIT: Funktionsaufrufe, Objekte und Destrukturierung je Pixel kosten dort ein
+// Vielfaches. In Pixelschleifen nur lokale Variablen und Typed Arrays; messen mit `make hermes`.
 import { decode } from 'jpeg-js';
 
 export type Rgb = { w: number; h: number; data: Uint8Array }; // RGB, 3 Byte je Pixel
@@ -47,61 +49,37 @@ export function hsvRange(img: Rgb, lo: [number, number, number], hi: [number, nu
   return { w: img.w, h: img.h, data: out };
 }
 
-function integral(m: Mask): Int32Array {
-  const W = m.w + 1;
-  const s = new Int32Array(W * (m.h + 1));
-  for (let y = 0; y < m.h; y++) {
-    let row = 0;
-    for (let x = 0; x < m.w; x++) {
-      row += m.data[y * m.w + x];
-      s[(y + 1) * W + x + 1] = s[y * W + x + 1] + row;
-    }
+// dst[p] = 1, wenn im Fenster [p − a, p − a + k) der Linie, aufs Bild beschnitten, ein Pixel gesetzt
+// ist (all: jedes). pre: Puffer mit mindestens n + 1 Einträgen.
+function window1d(src: Uint8Array, dst: Uint8Array, start: number, step: number, n: number, a: number, k: number, all: boolean, pre: Int32Array) {
+  for (let p = 0, i = start; p < n; p++, i += step) pre[p + 1] = pre[p] + src[i];
+  for (let p = 0, i = start; p < n; p++, i += step) {
+    const p0 = p - a < 0 ? 0 : p - a, p1 = p - a + k > n ? n : p - a + k;
+    const c = pre[p1] - pre[p0];
+    dst[i] = (all ? c === p1 - p0 : c > 0) ? 1 : 0;
   }
-  return s;
-}
-
-function boxCount(s: Int32Array, w: number, h: number, x0: number, y0: number, x1: number, y1: number) {
-  // Anzahl gesetzter Pixel im Fenster [x0, x1) x [y0, y1), auf das Bild beschnitten
-  const W = w + 1;
-  x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, w); y1 = Math.min(y1, h);
-  return s[y1 * W + x1] - s[y0 * W + x1] - s[y1 * W + x0] + s[y0 * W + x0];
 }
 
 /** Morphologisches Schließen mit Rechteck kw x kh (wie cv2.morphologyEx MORPH_CLOSE). */
 export function close(m: Mask, kw: number, kh: number): Mask {
-  const ax = Math.floor(kw / 2), ay = Math.floor(kh / 2);
-  const dil = new Uint8Array(m.data.length);
-  let s = integral(m);
-  for (let y = 0; y < m.h; y++)
-    for (let x = 0; x < m.w; x++)
-      dil[y * m.w + x] = boxCount(s, m.w, m.h, x - ax, y - ay, x - ax + kw, y - ay + kh) > 0 ? 1 : 0;
-  // Erosion: außerhalb des Bildes gilt als gesetzt (OpenCV-Vorgabe)
-  const d: Mask = { w: m.w, h: m.h, data: dil };
-  s = integral(d);
-  const out = new Uint8Array(m.data.length);
-  for (let y = 0; y < m.h; y++)
-    for (let x = 0; x < m.w; x++) {
-      const x0 = x - ax, y0 = y - ay, x1 = x0 + kw, y1 = y0 + kh;
-      const inside = (Math.min(x1, m.w) - Math.max(x0, 0)) * (Math.min(y1, m.h) - Math.max(y0, 0));
-      out[y * m.w + x] = boxCount(s, m.w, m.h, x0, y0, x1, y1) === inside ? 1 : 0;
-    }
-  return { w: m.w, h: m.h, data: out };
+  const { w, h } = m, ax = Math.floor(kw / 2), ay = Math.floor(kh / 2);
+  const a = new Uint8Array(w * h), b = new Uint8Array(w * h), pre = new Int32Array(Math.max(w, h) + 1);
+  // Rechteck separabel: Zeilen, dann Spalten. Erosion: außerhalb des Bildes gilt als gesetzt (OpenCV-Vorgabe)
+  for (let y = 0; y < h; y++) window1d(m.data, a, y * w, 1, w, ax, kw, false, pre);
+  for (let x = 0; x < w; x++) window1d(a, b, x, w, h, ay, kh, false, pre);
+  for (let y = 0; y < h; y++) window1d(b, a, y * w, 1, w, ax, kw, true, pre);
+  for (let x = 0; x < w; x++) window1d(a, b, x, w, h, ay, kh, true, pre);
+  return { w, h, data: b };
 }
 
 /** 3x3-Dilatation (wie cv2.dilate mit np.ones((3, 3))). */
 export function dilate3(m: Mask): Mask {
-  const out = new Uint8Array(m.data.length);
-  for (let y = 0; y < m.h; y++)
-    for (let x = 0; x < m.w; x++) {
-      let v = 0;
-      for (let dy = -1; dy <= 1 && !v; dy++)
-        for (let dx = -1; dx <= 1 && !v; dx++) {
-          const xx = x + dx, yy = y + dy;
-          if (xx >= 0 && yy >= 0 && xx < m.w && yy < m.h && m.data[yy * m.w + xx]) v = 1;
-        }
-      out[y * m.w + x] = v;
-    }
-  return { w: m.w, h: m.h, data: out };
+  const { w, h, data } = m, n = w * h;
+  const row = new Uint8Array(n), out = new Uint8Array(n);
+  for (let y = 0, i = 0; y < h; y++)
+    for (let x = 0; x < w; x++, i++) row[i] = data[i] | (x > 0 ? data[i - 1] : 0) | (x < w - 1 ? data[i + 1] : 0);
+  for (let i = 0; i < n; i++) out[i] = row[i] | (i >= w ? row[i - w] : 0) | (i < n - w ? row[i + w] : 0);
+  return { w, h, data: out };
 }
 
 function reflect101(i: number, n: number) {
@@ -124,21 +102,28 @@ export function gaussKernel(ksize: number, sigma: number): Float32Array {
 export function gaussianBlur(g: Gray, ksize: number, sigma: number, round = false): Gray {
   const k = gaussKernel(ksize, sigma);
   const r = (ksize - 1) / 2;
-  const tmp = new Float32Array(g.data.length);
-  const out = new Float32Array(g.data.length);
-  for (let y = 0; y < g.h; y++)
-    for (let x = 0; x < g.w; x++) {
+  const { w, h, data } = g;
+  // gespiegelte Indizes je Fensterposition: ix[x + i] für Pixel x + i − r, iy schon mal w
+  const ix = new Int32Array(w + 2 * r), iy = new Int32Array(h + 2 * r);
+  for (let i = 0; i < ix.length; i++) ix[i] = reflect101(i - r, w);
+  for (let i = 0; i < iy.length; i++) iy[i] = reflect101(i - r, h) * w;
+  const tmp = new Float32Array(w * h);
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
       let s = 0;
-      for (let i = -r; i <= r; i++) s += k[i + r] * g.data[y * g.w + reflect101(x + i, g.w)];
-      tmp[y * g.w + x] = s;
+      for (let i = 0; i < ksize; i++) s += k[i] * data[row + ix[x + i]];
+      tmp[row + x] = s;
     }
-  for (let y = 0; y < g.h; y++)
-    for (let x = 0; x < g.w; x++) {
+  }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
       let s = 0;
-      for (let i = -r; i <= r; i++) s += k[i + r] * tmp[reflect101(y + i, g.h) * g.w + x];
-      out[y * g.w + x] = round ? Math.min(255, Math.max(0, Math.round(s))) : s;
+      for (let i = 0; i < ksize; i++) s += k[i] * tmp[iy[y + i] + x];
+      out[y * w + x] = round ? Math.min(255, Math.max(0, Math.round(s))) : s;
     }
-  return { w: g.w, h: g.h, data: out };
+  return { w, h, data: out };
 }
 
 /**
@@ -232,41 +217,48 @@ export type Component = {
 
 /** Zusammenhängende Flächen (8er-Nachbarschaft) mit Zeilen-Extremen für die konvexe Hülle. */
 export function components(m: Mask, eight = true): Component[] {
-  const { w, h } = m;
+  const { w, h, data } = m;
   const label = new Int32Array(w * h).fill(-1);
+  const stack = new Int32Array(w * h); // jedes Pixel kommt höchstens einmal hinein
+  const rowMin = new Int32Array(h).fill(w), rowMax = new Int32Array(h).fill(-1);
   const out: Component[] = [];
-  const stack: number[] = [];
   for (let start = 0; start < w * h; start++) {
-    if (!m.data[start] || label[start] >= 0) continue;
+    if (!data[start] || label[start] >= 0) continue;
     const id = out.length;
-    const c: Component = { x: w, y: h, w: 0, h: 0, pixels: 0, filled: 0, rows: new Map() };
-    let x1 = 0, y1 = 0;
+    let x0 = w, y0 = h, x1 = 0, y1 = 0, pixels = 0, sp = 0, j = 0;
     label[start] = id;
-    stack.push(start);
-    while (stack.length) {
-      const i = stack.pop()!;
-      const x = i % w, y = (i - x) / w;
-      c.pixels++;
-      if (x < c.x) c.x = x;
-      if (y < c.y) c.y = y;
+    stack[sp++] = start;
+    while (sp) {
+      const i = stack[--sp];
+      const y = (i / w) | 0, x = i - y * w;
+      pixels++;
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
       if (x > x1) x1 = x;
       if (y > y1) y1 = y;
-      const r = c.rows.get(y);
-      if (!r) c.rows.set(y, [x, x]);
-      else { if (x < r[0]) r[0] = x; if (x > r[1]) r[1] = x; }
-      for (let dy = -1; dy <= 1; dy++)
-        for (let dx = -1; dx <= 1; dx++) {
-          if ((!dx && !dy) || (!eight && dx && dy)) continue;
-          const xx = x + dx, yy = y + dy;
-          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-          const j = yy * w + xx;
-          if (m.data[j] && label[j] < 0) { label[j] = id; stack.push(j); }
-        }
+      if (x < rowMin[y]) rowMin[y] = x;
+      if (x > rowMax[y]) rowMax[y] = x;
+      const l = x > 0, r = x < w - 1, u = y > 0, d = y < h - 1;
+      if (l && data[j = i - 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (r && data[j = i + 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (u && data[j = i - w] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (d && data[j = i + w] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (!eight) continue;
+      if (u && l && data[j = i - w - 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (u && r && data[j = i - w + 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (d && l && data[j = i + w - 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
+      if (d && r && data[j = i + w + 1] && label[j] < 0) { label[j] = id; stack[sp++] = j; }
     }
-    c.w = x1 - c.x + 1;
-    c.h = y1 - c.y + 1;
-    for (const [a, b] of c.rows.values()) c.filled += b - a + 1;
-    out.push(c);
+    // zusammenhängend: jede Zeile zwischen y0 und y1 enthält ein Pixel
+    const rows = new Map<number, [number, number]>();
+    let filled = 0;
+    for (let y = y0; y <= y1; y++) {
+      rows.set(y, [rowMin[y], rowMax[y]]);
+      filled += rowMax[y] - rowMin[y] + 1;
+      rowMin[y] = w;
+      rowMax[y] = -1;
+    }
+    out.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, pixels, filled, rows });
   }
   return out;
 }
@@ -394,12 +386,13 @@ export function perspective(src: Pt[], dst: Pt[]): number[] {
 }
 
 /** Bild durch inverse Abbildung (Zielpixel -> Quellpunkt) neu abtasten, bilinear, außen schwarz. */
-export function remap(img: Rgb, w: number, h: number, inv: (x: number, y: number) => Pt): Rgb {
+export function remap(img: Rgb, w: number, h: number, inv: (x: number, y: number, s: Float64Array) => void): Rgb {
   const out = new Uint8Array(w * h * 3);
-  const src = img.data, iw = img.w, ih = img.h;
+  const src = img.data, iw = img.w, ih = img.h, s = new Float64Array(2);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      const [sx, sy] = inv(x, y);
+      inv(x, y, s);
+      const sx = s[0], sy = s[1];
       const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0;
       const o = (y * w + x) * 3;
       if (x0 >= 0 && y0 >= 0 && x0 + 1 < iw && y0 + 1 < ih) {
@@ -419,8 +412,9 @@ export function remap(img: Rgb, w: number, h: number, inv: (x: number, y: number
 /** Viereck quad (Bild) auf ein Rechteck w x h entzerren. */
 export function warpQuad(img: Rgb, quad: Pt[], w: number, h: number): Rgb {
   const m = perspective([[0, 0], [w, 0], [w, h], [0, h]], quad);
-  return remap(img, w, h, (x, y) => {
+  return remap(img, w, h, (x, y, s) => {
     const d = m[6] * x + m[7] * y + m[8];
-    return [(m[0] * x + m[1] * y + m[2]) / d, (m[3] * x + m[4] * y + m[5]) / d];
+    s[0] = (m[0] * x + m[1] * y + m[2]) / d;
+    s[1] = (m[3] * x + m[4] * y + m[5]) / d;
   });
 }

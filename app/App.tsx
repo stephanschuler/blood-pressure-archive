@@ -6,7 +6,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
 import type { Reading } from './src/erkennung/messwerte';
-import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
+import { discard, importPhotos, messzeit, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
@@ -178,7 +178,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} messzeit={messzeit()} c={c} />
       <StatusBar style="auto" />
     </View>
   );

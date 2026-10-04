@@ -10,6 +10,23 @@ import { exifTime } from './exif';
 // eigener Thread: die Erkennung blockiert sonst den JS-Thread und damit die Oberfläche
 const erkennung = createWorkletRuntime('erkennung');
 
+// Summen in ms seit App-Start; ermittelt, wo die Zeit je Foto auf dem Handy bleibt
+const zeiten = { fotos: 0, verkleinern: 0, umweg: 0, dekodieren: 0, lesen: 0, gesamt: 0 };
+
+export function messzeit(): string | null {
+  const { fotos, ...summen } = zeiten;
+  if (!fotos) return null;
+  const s = (ms: number) => `${(ms / fotos / 1000).toFixed(2).replace('.', ',')} s`;
+  return [
+    `Erkennung, Ø aus ${fotos} Fotos`,
+    `Verkleinern ${s(summen.verkleinern)}`,
+    `JPEG-Umweg ${s(summen.umweg)}`,
+    `Dekodieren ${s(summen.dekodieren)}`,
+    `Lesen ${s(summen.lesen)}`,
+    `Gesamt ${s(summen.gesamt)}`,
+  ].join('\n');
+}
+
 export type Foto = {
   uri: string;
   zeit: Date;
@@ -35,18 +52,31 @@ export async function importPhotos(): Promise<Foto[]> {
 
 /** Foto verkleinern (lange Seite 1200 px, EXIF-Drehung angewendet) und Messwerte lesen. */
 export async function recognize(foto: Foto): Promise<Reading> {
+  const t0 = Date.now();
   const full = await ImageManipulator.manipulate(foto.uri).renderAsync();
   const size = full.width >= full.height ? { width: 1200 } : { height: 1200 };
   const small = await ImageManipulator.manipulate(full).resize(size).renderAsync();
+  const t1 = Date.now();
   const saved = await small.saveAsync({ base64: true, format: SaveFormat.JPEG, compress: 0.92 });
   new File(saved.uri).delete();
   const bin = atob(saved.base64!);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return runOnRuntimeAsync(erkennung, (b: Uint8Array) => {
+  const t2 = Date.now();
+  const r = await runOnRuntimeAsync(erkennung, (b: Uint8Array) => {
     'worklet';
-    return readValues(decodeJpeg(b));
+    const a = Date.now();
+    const img = decodeJpeg(b);
+    const m = Date.now();
+    return { reading: readValues(img), dekodieren: m - a, lesen: Date.now() - m };
   }, bytes);
+  zeiten.fotos++;
+  zeiten.verkleinern += t1 - t0;
+  zeiten.umweg += t2 - t1;
+  zeiten.dekodieren += r.dekodieren;
+  zeiten.lesen += r.lesen;
+  zeiten.gesamt += Date.now() - t0;
+  return r.reading;
 }
 
 export function discard(foto: Foto) {

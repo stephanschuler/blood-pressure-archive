@@ -11,8 +11,8 @@ const BREITE = 268;
 // setzt buildenv/build-apk.sh; Metro und Tests kennen sie nicht
 const VERSION = process.env.EXPO_PUBLIC_VERSION ?? 'Entwicklung';
 
-export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, c }: {
-  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; eintraege: Eintrag[]; c: Colors;
+export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, messzeit, c }: {
+  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; eintraege: Eintrag[]; messzeit: string | null; c: Colors;
 }) {
   const insets = useSafeAreaInsets();
   const x = useRef(new Animated.Value(-BREITE)).current;
@@ -62,7 +62,7 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, c }: {
             ))}
           </Fragment>
         ))}
-        <Text style={{ marginTop: 'auto', padding: 16, fontSize: 11, color: c.sub, borderTopWidth: 1, borderColor: c.line }}>Version {VERSION}</Text>
+        <Text style={{ marginTop: 'auto', padding: 16, fontSize: 11, color: c.sub, borderTopWidth: 1, borderColor: c.line }}>{messzeit && `${messzeit}\n\n`}Version {VERSION}</Text>
       </Animated.View>
     </Modal>
   );

@@ -586,7 +586,6 @@ fehlt ein Layout. `ANFORDERUNGEN.md` verlangt dagegen alle drei Geräte.
   Dienstes `ocr`. Ein Ort wie `app/tools/` passte besser zum Inhalt. Der Vergleich mit Python
   läuft gegen die vorhandene `daten/messlauf/referenz.csv`. Neu erzeugen lässt sie sich nicht;
   `referenz.py` und `measures.pkl` lagen nie im Repo.
-- **Zeitmessung auf dem Handy,** etwa als Anzeige der Erkennungsdauer in einer Debug-Ansicht.
 - **Messpunkte einer Messung gegeneinander prüfen:** Ein still falscher Wert weicht meist von den
   anderen Fotos derselben Messung ab (`TECHNOLOGIE.md`). Im Code ist das nicht umgesetzt; in der
   Bestätigung ließe es sich als zusätzliche Markierung nutzen.

@@ -246,3 +246,14 @@ test('Monatskopf öffnet den Datumswähler; Tag ohne Messung: Sprung zum Tag dav
   await act(() => open.mock.calls[0][0].onChange({ type: 'set' }, new Date(2026, 0, 2, 12)));
   expect(screen.getByText('Keine Messung am 02.01.2026, nächste davor: Do 01.01.2026')).toBeOnTheScreen();
 });
+
+test('sichtbare Zeilen melden: SectionList übergibt keyExtractor auch den Monatsabschnitt', async () => {
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  const { container } = await render(<App />);
+  const layout = (x: object) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 40, ...x } } });
+  // Jest berechnet kein Layout: ohne diese Ereignisse meldet die Liste nie, was sichtbar ist
+  await fireEvent(container.queryAll((n) => n.type === 'RCTScrollView')[0], 'layout', layout({ height: 800 }));
+  const zellen = container.queryAll((n) => n.type === 'View' && !!n.props.onFocusCapture);
+  for (const [i, z] of zellen.entries()) await fireEvent(z, 'layout', layout({ y: i * 40 }));
+  expect(screen.getByText('Januar 2026')).toBeOnTheScreen();
+});

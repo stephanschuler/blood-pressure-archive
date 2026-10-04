@@ -125,7 +125,9 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
           sections={abschnitte}
           stickySectionHeadersEnabled
           extraData={[offen, markiert]}
-          keyExtractor={(z) => `${z.art}${(z.art === 'woche' ? z.von : z.tag).getTime()}`}
+          // beim Melden der Sichtbarkeit kommt für Monatskopf und -fuß der Abschnitt selbst
+          keyExtractor={(z: Woche | Tag | Abschnitt) =>
+            'monat' in z ? `monat${z.monat.getTime()}` : `${z.art}${(z.art === 'woche' ? z.von : z.tag).getTime()}`}
           onViewableItemsChanged={meldeSichtbar}
           // Ziel noch nicht vermessen: grob dorthin, dann genau
           onScrollToIndexFailed={(info) => {

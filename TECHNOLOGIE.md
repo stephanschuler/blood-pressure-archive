@@ -51,6 +51,10 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
   Gebaut wird im Docker-Volume `blutdruck-build`, nicht im Projektordner: Beim Entpacken der
   Android-Vorlage über die Docker-Dateifreigabe des Macs gehen Dateirechte verloren.
 - Erster Build: knapp 17 Minuten, APK 25 MB (nur `arm64-v8a`). Expo SDK 57, React Native 0.86.
+- **Versionierung:** Android meldet `<version>-<hash>`, etwa `0.0.1-4aea666`. `version` steht in
+  `app/app.json`; `make apk` reicht den Commit-Hash als `GIT_HASH` in den Container, und
+  `app/app.config.ts` setzt daraus `android.version`. Der Hash gilt für den letzten Commit,
+  uncommittete Änderungen sieht man ihm nicht an. `versionCode` bleibt 1.
 
 ### APK aufs Handy
 

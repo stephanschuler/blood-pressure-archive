@@ -23,7 +23,7 @@ icons: ## App-Icons und Ladeanimation aus app/assets/svg/ als PNG erzeugen
 	$(COMPOSE) run --rm svg sh /work/buildenv/icons.sh
 
 apk: ## Release-APK bauen: app/dist/blutdruck.apk
-	$(ANDROID) /work/buildenv/build-apk.sh
+	$(COMPOSE) run --rm -e GIT_HASH=$$(git rev-parse --short HEAD) android /work/buildenv/build-apk.sh
 
 serve-apk: lan-ip ## APK im WLAN anbieten; zeigt die URL fürs Handy, Ende mit Ctrl+C
 	@echo "Auf dem Handy öffnen: http://$(LAN_IP):8000/blutdruck.apk"

@@ -55,6 +55,28 @@ export function deleteMesspunkt(db: Sql, id: number) {
   db.runSync('DELETE FROM messpunkt WHERE id = ?', id);
 }
 
+export function zaehlen(db: Sql): number {
+  return db.getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM messpunkt')!.n;
+}
+
+const gueltig = (p: Omit<Messpunkt, 'id'>) =>
+  typeof p.zeit === 'string' && !Number.isNaN(Date.parse(p.zeit)) && [p.sys, p.dia, p.puls].every(Number.isInteger);
+
+/**
+ * Ergänzt die Messpunkte einer Datensicherung; Doppelte überspringt insertMesspunkt.
+ * 'zu neu': Sicherung einer neueren App-Version. Wirft bei einer fremden Datenbank.
+ */
+export function einspielen(ziel: Sql, quelle: Sql): { gelesen: number; neu: number } | 'zu neu' {
+  const { user_version } = quelle.getFirstSync<{ user_version: number }>('PRAGMA user_version')!;
+  if (user_version > MIGRATIONS.length) return 'zu neu';
+  if (user_version < 1) throw new Error('not a backup of this app');
+  migrate(quelle);
+  const punkte = quelle.getAllSync<Omit<Messpunkt, 'id'>>('SELECT zeit, sys, dia, puls FROM messpunkt').filter(gueltig);
+  const vorher = zaehlen(ziel);
+  ziel.withTransactionSync(() => punkte.forEach((p) => insertMesspunkt(ziel, p)));
+  return { gelesen: punkte.length, neu: zaehlen(ziel) - vorher };
+}
+
 /** Messungen, neueste zuerst. */
 export function listMessungen(db: Sql): Messung[] {
   return gruppieren(db.getAllSync<Messpunkt>('SELECT * FROM messpunkt ORDER BY zeit'));

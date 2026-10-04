@@ -20,3 +20,5 @@ png check                      96   96 check.png
 png delete                     96   96 delete.png
 # Seitenleiste: 3-fach für 24 dp
 png menu                       72   72 menu.png
+png download                   72   72 download.png
+png upload-file                72   72 upload-file.png

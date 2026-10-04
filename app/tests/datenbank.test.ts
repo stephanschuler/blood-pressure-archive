@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { MIGRATIONS, deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting } from '../src/datenbank';
+import { MIGRATIONS, deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, zaehlen } from '../src/datenbank';
 import { memoryDb } from './sqlite';
 
 const version = (db: ReturnType<typeof memoryDb>) => db.getFirstSync<{ user_version: number }>('PRAGMA user_version')!.user_version;
@@ -58,4 +58,40 @@ test('Einstellungen: fehlend, setzen, überschreiben', () => {
   setSetting(db, 'theme', 'dark');
   setSetting(db, 'theme', 'light');
   assert.equal(getSetting(db, 'theme'), 'light');
+});
+
+test('Datensicherung einspielen: ergänzt, überspringt Doppelte und ungültige Werte', () => {
+  const p = { zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 };
+  const ziel = memoryDb();
+  migrate(ziel);
+  insertMesspunkt(ziel, p);
+  const quelle = memoryDb();
+  migrate(quelle);
+  insertMesspunkt(quelle, p);
+  insertMesspunkt(quelle, { ...p, zeit: '2026-01-02T07:00:00.000Z' });
+  quelle.runSync("INSERT INTO messpunkt (zeit, sys, dia, puls) VALUES ('kaputt', 1, 2, 3), ('2026-01-03T07:00:00.000Z', 'x', 2, 3)");
+  assert.deepEqual(einspielen(ziel, quelle), { gelesen: 2, neu: 1 });
+  assert.equal(zaehlen(ziel), 2);
+});
+
+test('Datensicherung im Stand der ersten App-Version wird migriert und eingespielt', () => {
+  const quelle = memoryDb();
+  migrate(quelle, 1);
+  quelle.runSync("INSERT INTO messpunkt (zeit, sys, dia, puls, arm) VALUES ('2026-01-01T07:00:00.000Z', 130, 85, 60, 'links')");
+  const ziel = memoryDb();
+  migrate(ziel);
+  assert.deepEqual(einspielen(ziel, quelle), { gelesen: 1, neu: 1 });
+});
+
+test('Sicherung einer neueren App-Version oder fremde Datenbank: nichts übernommen', () => {
+  const ziel = memoryDb();
+  migrate(ziel);
+  const neuer = memoryDb();
+  migrate(neuer);
+  neuer.execSync(`PRAGMA user_version = ${MIGRATIONS.length + 1}`);
+  assert.equal(einspielen(ziel, neuer), 'zu neu');
+  const fremd = memoryDb();
+  fremd.execSync('CREATE TABLE rezept (name TEXT)');
+  assert.throws(() => einspielen(ziel, fremd));
+  assert.equal(zaehlen(ziel), 0);
 });

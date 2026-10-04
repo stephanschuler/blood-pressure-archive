@@ -60,11 +60,13 @@ Messung. Jeder Messpunkt besteht aus:
 
 ### Speicherung
 
-- Vorerst: lokale Datenbank in der App.
+- Lokale Datenbank in der App.
+- **Datensicherung:** die SQLite-Datei sichern und wieder einspielen
+  ([DATENSICHERUNG.md](DATENSICHERUNG.md)).
 
 ### Später
 
-- **Export** in mehreren Formaten: SQLite-Datei, CSV-Datei, Excel-Datei.
+- **Export** in mehreren Formaten: CSV-Datei, Excel-Datei.
 - **Evtl. Cloud-Sync,** z. B. der Export-Formate nach Google Drive.
 
 ## Offene Punkte

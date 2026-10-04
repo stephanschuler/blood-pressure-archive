@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
+import { deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
+import { dateiOeffnen, dateiname, inOrdnerSpeichern } from './src/datensicherung';
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
-import { Seitenleiste } from './src/seitenleiste';
+import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
 import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 
@@ -106,6 +107,33 @@ function Main() {
       { text: 'Löschen', style: 'destructive', onPress: () => { deleteMesspunkt(p.id); setMessungen(listMessungen()); } },
     ]);
 
+  // jeder Fehler sichtbar: sonst verlässt sich der Nutzer auf eine Sicherung, die es nicht gibt
+  const versuchen = (titel: string, aktion: () => Promise<unknown>) => () => aktion().catch((e) => Alert.alert(titel, String(e)));
+  const eintraege: Eintrag[] = [
+    {
+      abschnitt: 'Datensicherung', label: 'Speichern', icon: require('./assets/download.png'),
+      onPress: versuchen('Nicht gesichert', async () => {
+        if (await inOrdnerSpeichern(dateiname('sqlite'), 'application/octet-stream', sichern())) Alert.alert('Gesichert', `${zaehlen()} Messpunkte.`);
+      }),
+    },
+    {
+      abschnitt: 'Datensicherung', label: 'Einspielen', icon: require('./assets/upload-file.png'),
+      onPress: versuchen('Nicht eingespielt', async () => {
+        const bytes = await dateiOeffnen();
+        if (!bytes) return;
+        let r: ReturnType<typeof einspielen>;
+        try {
+          r = einspielen(bytes);
+        } catch {
+          return Alert.alert('Nicht eingespielt', 'Keine Datensicherung dieser App.');
+        }
+        if (r === 'zu neu') return Alert.alert('Nicht eingespielt', 'Die Sicherung stammt von einer neueren App-Version.');
+        setMessungen(listMessungen());
+        Alert.alert('Eingespielt', `${r.gelesen} Messpunkte gelesen, ${r.neu} neu übernommen.`);
+      }),
+    },
+  ];
+
   const screen = { flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8, paddingHorizontal: 16 };
 
   if (offen) {
@@ -138,7 +166,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={[]} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} c={c} />
       <StatusBar style="auto" />
     </View>
   );

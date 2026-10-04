@@ -22,12 +22,12 @@ install: ## npm-Abhängigkeiten der App installieren
 icons: ## App-Icons und Ladeanimation aus app/assets/svg/ als PNG erzeugen
 	$(COMPOSE) run --rm svg sh /work/buildenv/icons.sh
 
-apk: ## Release-APK bauen: app/dist/blutdruck.apk
+apk: ## Release-APK bauen: app/dist/blutdruck-<version>-<hash>.apk
 	$(COMPOSE) run --rm -e GIT_HASH=$$(git rev-parse --short HEAD) android /work/buildenv/build-apk.sh
 
 serve-apk: lan-ip ## APK im WLAN anbieten; zeigt die URL fürs Handy, Ende mit Ctrl+C
-	@echo "Auf dem Handy öffnen: http://$(LAN_IP):8000/blutdruck.apk"
-	@$(COMPOSE) run --rm -p 8000:8000 -w /work/app/dist node npx --yes http-server -p 8000 -s
+	@echo "Auf dem Handy öffnen: http://$(LAN_IP):8000/$$(basename app/dist/blutdruck-*.apk)"
+	@$(COMPOSE) run --rm -p 8000:8000 -w /work/app/dist node npx --yes http-server -p 8000 -c-1
 
 lan-ip:
 	@test -n "$(LAN_IP)" || { echo "WLAN-Adresse des Macs nicht gefunden; setze LAN_IP=…"; exit 1; }

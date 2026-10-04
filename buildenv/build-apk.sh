@@ -10,5 +10,8 @@ npx expo prebuild --platform android --no-install --clean
 cd android
 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --console=plain
 mkdir -p /work/app/dist
-cp app/build/outputs/apk/release/app-release.apk /work/app/dist/blutdruck.apk
-ls -la /work/app/dist/blutdruck.apk
+# Version und Hash im Dateinamen: jeder Build hat eine neue Download-Adresse, kein Browser-Cache greift.
+APK=/work/app/dist/blutdruck-$(node -p "require('../app.json').expo.version")-${GIT_HASH:-dev}.apk
+rm -f /work/app/dist/*.apk
+cp app/build/outputs/apk/release/app-release.apk "$APK"
+ls -la "$APK"

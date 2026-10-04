@@ -47,7 +47,7 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 - `buildenv/Dockerfile`: Node 22, JDK 17, Android-Kommandozeilenwerkzeuge (amd64). Weitere
   SDK-Teile lädt Gradle beim ersten Build ins Volume `blutdruck-android-sdk`.
 - `docker-compose.yml` und `Makefile` im Projekt-Root; `make help` listet alle Befehle.
-- `make apk`: baut das Release-APK nach `app/dist/blutdruck.apk` (`buildenv/build-apk.sh`).
+- `make apk`: baut das Release-APK nach `app/dist/blutdruck-<version>-<hash>.apk` (`buildenv/build-apk.sh`).
   Gebaut wird im Docker-Volume `blutdruck-build`, nicht im Projektordner: Beim Entpacken der
   Android-Vorlage über die Docker-Dateifreigabe des Macs gehen Dateirechte verloren.
 - Erster Build: knapp 17 Minuten, APK 25 MB (nur `arm64-v8a`). Expo SDK 57, React Native 0.86.
@@ -58,8 +58,14 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 
 ### APK aufs Handy
 
-- Release-APK bauen (enthält den JS-Code), vom Container per `python3 -m http.server` bereitstellen
-  und im Handy-Browser laden. Einmalig „Installation aus unbekannten Quellen" erlauben.
+- Release-APK bauen (enthält den JS-Code), mit `make serve-apk` im WLAN bereitstellen
+  (`http-server` im Container, mit Zugriffsprotokoll) und im Handy-Browser laden. Einmalig
+  „Installation aus unbekannten Quellen" erlauben.
+- **Version und Commit-Hash im Dateinamen.** Chrome auf dem Handy installierte trotz
+  `Cache-Control: no-cache` und `?v=`-Parameter die alte APK aus dem Cache, sobald sie über die
+  Dateiliste geöffnet wurde; das Zugriffsprotokoll zeigte keinen Abruf. Ein neuer Name je Build
+  umgeht jeden Cache.
+- Welche APK installiert ist, zeigt *Einstellungen → Apps → Blood Pressure Archive → Version*.
 - USB-Kopie bräuchte auf dem Mac ein MTP-Programm (z. B. OpenMTP).
 - Jede Änderung kostet so einen Build: gut für Zwischenstände, zu zäh für die tägliche Entwicklung.
 

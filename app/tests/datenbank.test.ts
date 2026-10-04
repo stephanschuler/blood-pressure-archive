@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { MIGRATIONS, deleteMesspunkt, getSetting, insertMesspunkt, listMessungen, migrate, setSetting } from '../src/datenbank';
+import { MIGRATIONS, deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting } from '../src/datenbank';
 import { memoryDb } from './sqlite';
 
 const version = (db: ReturnType<typeof memoryDb>) => db.getFirstSync<{ user_version: number }>('PRAGMA user_version')!.user_version;
@@ -18,6 +18,19 @@ test('frische Datenbank: alle Migrationen, Messpunkte speichern, gruppieren, lö
   assert.equal(abend.punkte.length, 1);
   deleteMesspunkt(db, morgen.punkte[0].id);
   assert.deepEqual(listMessungen(db).map((m) => m.punkte.length), [1, 1]);
+});
+
+test('derselbe Messpunkt wird nur einmal gespeichert', () => {
+  const db = memoryDb();
+  migrate(db);
+  const p = { zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 };
+  assert.equal(hasMesspunkt(db, p), false);
+  insertMesspunkt(db, p);
+  insertMesspunkt(db, p);
+  insertMesspunkt(db, { ...p, puls: 61 });
+  assert.equal(hasMesspunkt(db, p), true);
+  assert.equal(hasMesspunkt(db, { ...p, zeit: '2026-01-01T07:00:01.000Z' }), false);
+  assert.deepEqual(listMessungen(db)[0].punkte.map((x) => x.puls), [60, 61]);
 });
 
 test('Datenbank im Stand der ersten App-Version wird ohne Verlust migriert', () => {

@@ -155,3 +155,28 @@ test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet 
   expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(screen.queryByDisplayValue('128')).toBeNull();
 });
+
+test('Import eines schon gespeicherten Messpunkts: ohne Bestätigung übersprungen', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  const neu = { ...FOTO, uri: 'file:///cache/neu.jpg', zeit: new Date('2026-01-01T19:00:00Z') };
+  foto.importPhotos.mockResolvedValue([FOTO, neu]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, true, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByDisplayValue('128');
+  expect(foto.discard).toHaveBeenCalledWith(FOTO);
+  expect(screen.queryByText(/weitere Fotos/)).toBeNull();
+  await fireEvent.press(screen.getByText('Speichern'));
+  expect(db.listMessungen().map((m) => m.punkte.length)).toEqual([1, 1]);
+});
+
+test('gleiche Zeit, andere erkannte Werte: Bestätigung wie gewohnt', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  foto.importPhotos.mockResolvedValue([FOTO]);
+  foto.recognize.mockResolvedValue({ values: [123, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await fireEvent.changeText(await screen.findByDisplayValue('123'), '128');
+  await fireEvent.press(screen.getByText('Speichern'));
+  expect(db.listMessungen()[0].punkte).toHaveLength(1);
+});

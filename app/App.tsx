@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { deleteMesspunkt, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
+import { deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
@@ -14,6 +14,10 @@ migrate();
 Appearance.setColorScheme(parseTheme(getSetting('theme')));
 
 type Offen = { foto: Foto; reading: Reading | null };
+
+/** Schon gespeichert, etwa bei einem zweiten Import desselben Fotos: keine Bestätigung nötig. */
+const bekannt = (foto: Foto, { values: [sys, dia, puls] }: Reading) =>
+  sys !== null && dia !== null && puls !== null && hasMesspunkt({ zeit: foto.zeit.toISOString(), sys, dia, puls });
 
 export default function App() {
   return (
@@ -55,19 +59,22 @@ function Main() {
     const foto = queue[0];
     active.current = foto;
     setOffen({ foto, reading: null });
-    recognizeOnce(foto).then((reading) => active.current === foto && setOffen({ foto, reading }));
+    recognizeOnce(foto).then((reading) => {
+      if (active.current !== foto) return;
+      if (bekannt(foto, reading)) drop(foto);
+      else setOffen({ foto, reading });
+    });
   }, [queue, offen]);
 
-  const next = () => {
-    if (offen) {
-      discard(offen.foto);
-      readings.current.delete(offen.foto);
-    }
+  const drop = (foto: Foto) => {
+    discard(foto);
+    readings.current.delete(foto);
     active.current = null;
     setOffen(null);
     setQueue((q) => q.slice(1));
     setMessungen(listMessungen());
   };
+  const next = () => offen && drop(offen.foto);
 
   // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
   useEffect(() => {

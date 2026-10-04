@@ -49,6 +49,8 @@ Messung. Jeder Messpunkt besteht aus:
   gelöscht werden.
 - **Vorhandene Fotos einlesen:** Bereits existierende Fotos lassen sich importieren. Der
   Messzeitpunkt stammt aus den Metadaten des Fotos (EXIF).
+- **Doppelter Import:** Gibt es einen Messpunkt mit denselben drei Werten zur selben Sekunde schon,
+  entsteht kein zweiter. Liest die Erkennung genau diese Werte, entfällt die Bestätigung.
 
 ### Datenschutz
 

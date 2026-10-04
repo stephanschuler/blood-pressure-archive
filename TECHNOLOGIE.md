@@ -42,6 +42,16 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 - Eigenes Dockerfile (Node + JDK + Android SDK); die verbreiteten Cirrus-Labs-Images werden seit
   Mai 2026 nicht mehr gepflegt.
 
+### Stand Build (4.10.2026)
+
+- `buildenv/Dockerfile`: Node 22, JDK 17, Android-Kommandozeilenwerkzeuge (amd64). Weitere
+  SDK-Teile lädt Gradle beim ersten Build ins Volume `blutdruck-android-sdk`.
+- `docker-compose.yml` und `Makefile` im Projekt-Root; `make help` listet alle Befehle.
+- `make apk`: baut das Release-APK nach `app/dist/blutdruck.apk` (`buildenv/build-apk.sh`).
+  Gebaut wird im Docker-Volume `blutdruck-build`, nicht im Projektordner: Beim Entpacken der
+  Android-Vorlage über die Docker-Dateifreigabe des Macs gehen Dateirechte verloren.
+- Erster Build: knapp 17 Minuten, APK 25 MB (nur `arm64-v8a`). Expo SDK 57, React Native 0.86.
+
 ### APK aufs Handy
 
 - Release-APK bauen (enthält den JS-Code), vom Container per `python3 -m http.server` bereitstellen
@@ -52,10 +62,8 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 ### Entwicklungsschleife
 
 - **Expo Go** (Play Store): für alles ohne eigene native Module — Kamera, Datenbank, EXIF. Kein Build.
-- **Dev Client:** ab dem ersten eigenen nativen Modul (TFLite/OpenCV). Einmal als Debug-APK bauen;
-  danach kommt der JS-Code live vom Metro-Server im Container. Neu gebaut wird nur bei geänderten
-  nativen Abhängigkeiten.
-- Metro im Container: Port 8081 freigeben, `REACT_NATIVE_PACKAGER_HOSTNAME` auf die LAN-IP des Macs.
+- **Dev Client:** nicht eingerichtet; jede Änderung geht über die Release-APK (`make apk`,
+  `make serve-apk`).
 
 ### Android-Emulator
 
@@ -63,8 +71,7 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
   Android-Kommandozeilenwerkzeuge über Homebrew plus `emulator` und ein arm64-Systemabbild; bequemer:
   Android Studio.
 - APK per Drag & Drop aufs Emulatorfenster installieren.
-- Der Emulator erreicht den Mac unter `10.0.2.2`; der Dev Client lädt so von Metro im Container,
-  ohne adb.
+- Der Emulator erreicht den Mac unter `10.0.2.2`.
 - Kamera: Webcam des Macs als Emulatorkamera; Fotos per Drag & Drop.
 
 ### Später: iOS
@@ -240,4 +247,4 @@ sie beim App-Start ein.
 - Docker Desktop mit Rosetta-Emulation für amd64
 - Android-Emulator (Kommandozeilenwerkzeuge oder Android Studio)
 - Android-Handy: Installation aus unbekannten Quellen erlauben
-- Mac und Handy im selben WLAN (Metro)
+- Mac und Handy im selben WLAN (`make serve-apk`)

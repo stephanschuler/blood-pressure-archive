@@ -1,0 +1,28 @@
+services:
+  # Android-Build. amd64, weil Google aapt2 für Linux nur als x86_64 liefert (Rosetta).
+  android:
+    build: buildenv
+    image: blutdruck-app
+    platform: linux/amd64
+    working_dir: /work/app
+    volumes:
+      - .:/work
+      - android-sdk:/opt/android-sdk
+      - gradle:/root/.gradle
+      - npm:/root/.npm
+      - build:/build
+
+  # Tests, Typprüfung, Messlauf in TypeScript: natives Node, ohne Emulation.
+  node:
+    image: node:22-bookworm
+    working_dir: /work/app
+    volumes:
+      - .:/work
+      - npm-arm:/root/.npm
+
+volumes:
+  android-sdk: { name: blutdruck-android-sdk }
+  gradle: { name: blutdruck-gradle }
+  npm: { name: blutdruck-npm }
+  build: { name: blutdruck-build }
+  npm-arm: { name: blutdruck-npm-arm }

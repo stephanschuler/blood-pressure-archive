@@ -3,10 +3,6 @@ export type Theme = 'unspecified' | 'light' | 'dark'; // unspecified: wie das Sy
 export const THEMES: Theme[] = ['unspecified', 'light', 'dark'];
 export const THEME_LABEL: Record<Theme, string> = { unspecified: 'System', light: 'Hell', dark: 'Dunkel' };
 
-export function nextTheme(t: Theme): Theme {
-  return THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
-}
-
 /** Gespeicherten Wert lesen; Unbekanntes gilt als „wie das System". */
 export function parseTheme(value: string | null): Theme {
   return THEMES.includes(value as Theme) ? (value as Theme) : 'unspecified';

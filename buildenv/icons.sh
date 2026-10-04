@@ -18,3 +18,5 @@ png add-photo-alternate        96   96 add-photo-alternate.png
 # Knöpfe der Prüfansicht: 3-fach für 32 dp
 png check                      96   96 check.png
 png delete                     96   96 delete.png
+# Seitenleiste: 3-fach für 24 dp
+png menu                       72   72 menu.png

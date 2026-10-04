@@ -48,3 +48,6 @@ welcher Größe, steht in `buildenv/icons.sh`.
 Knopf-Symbole der Startseite (`add-a-photo`, `add-photo-alternate`) und der Prüfansicht (`check`,
 `delete`): Material Symbols Outlined, gefüllt, von Google, Apache 2.0, unverändert. Die App zeigt
 sie weiß auf einem Kreis im Herz-Rot `#E53946`.
+
+Symbole von Menü und Seitenleiste stammen aus derselben Quelle; die App zeigt sie ohne Kreis, in
+einer Textfarbe des Themas. Welche es sind, steht in `buildenv/icons.sh`.

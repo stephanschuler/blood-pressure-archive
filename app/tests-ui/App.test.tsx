@@ -40,7 +40,7 @@ test('leerer Start: Hinweis und Knöpfe', async () => {
   expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(screen.getByLabelText('Foto aufnehmen')).toBeOnTheScreen();
   expect(screen.getByLabelText('Fotos importieren')).toBeOnTheScreen();
-  expect(screen.getByText('Darstellung: System')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Menü')).toBeOnTheScreen();
 });
 
 test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste', async () => {
@@ -130,17 +130,16 @@ test('Umschalter Tageshälfte filtert die Liste und wird gespeichert; Messung kl
   expect(screen.getAllByLabelText(/^Messpunkt/)).toHaveLength(2);
 });
 
-test('Darstellung wechselt reihum und wird gespeichert', async () => {
+test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   const set = jest.spyOn(Appearance, 'setColorScheme');
   await render(<App />);
-  await fireEvent.press(screen.getByText('Darstellung: System'));
-  expect(screen.getByText('Darstellung: Hell')).toBeOnTheScreen();
-  expect(set).toHaveBeenLastCalledWith('light');
-  expect(db.getSetting('theme')).toBe('light');
-  await fireEvent.press(screen.getByText('Darstellung: Hell'));
-  await fireEvent.press(screen.getByText('Darstellung: Dunkel'));
-  expect(screen.getByText('Darstellung: System')).toBeOnTheScreen();
-  expect(db.getSetting('theme')).toBe('unspecified');
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  expect(screen.getByRole('button', { name: 'System', selected: true })).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Dunkel' }));
+  expect(set).toHaveBeenLastCalledWith('dark');
+  expect(db.getSetting('theme')).toBe('dark');
+  expect(screen.getByRole('button', { name: 'Dunkel', selected: true })).toBeOnTheScreen();
+  expect(screen.getByText('Version Entwicklung')).toBeOnTheScreen();
 });
 
 /** Zurück-Taste nachbilden: angemeldete Handler abfangen, den zuletzt angemeldeten auslösen. */

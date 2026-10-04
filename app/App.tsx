@@ -7,8 +7,9 @@ import { deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessung
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
+import { Seitenleiste } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
-import { COLORS, THEME_LABEL, nextTheme, parseTheme, type Colors, type Theme } from './src/theme';
+import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 
 migrate();
 
@@ -36,6 +37,7 @@ function Main() {
   const [gesamt, setGesamt] = useState(0);
   const [offen, setOffen] = useState<Offen | null>(null);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
+  const [menue, setMenue] = useState(false);
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
   const active = useRef<Foto | null>(null);
   const readings = useRef(new Map<Foto, Promise<Reading>>());
@@ -92,8 +94,7 @@ function Main() {
     return () => sub.remove();
   }, [offen]);
 
-  const switchTheme = () => {
-    const t = nextTheme(theme);
+  const waehleTheme = (t: Theme) => {
     setSetting('theme', t);
     Appearance.setColorScheme(t);
     setTheme(t);
@@ -126,10 +127,10 @@ function Main() {
   return (
     <View style={screen}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
-        <Pressable onPress={switchTheme} style={{ padding: 8 }}>
-          <Text style={{ color: c.sub }}>Darstellung: {THEME_LABEL[theme]}</Text>
+        <Pressable onPress={() => setMenue(true)} accessibilityRole="button" accessibilityLabel="Menü" style={{ padding: 10, marginLeft: -10 }}>
+          <Image source={require('./assets/menu.png')} style={{ width: 24, height: 24, tintColor: c.text }} />
         </Pressable>
+        <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
       </View>
       <Startseite messungen={messungen} c={c} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
@@ -137,6 +138,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={[]} c={c} />
       <StatusBar style="auto" />
     </View>
   );

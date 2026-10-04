@@ -14,7 +14,7 @@ Stand: Oktober 2026. Anforderungen: [ANFORDERUNGEN.md](ANFORDERUNGEN.md).
 | Datenbank          | `expo-sqlite` mit Drizzle (Migrationen)                               |
 | Export             | CSV von Hand, XLSX mit SheetJS (CDN-Tarball) oder ExcelJS, SQLite per `VACUUM INTO` |
 | Teilen / Drive     | System-Share-Sheet (`expo-sharing`); direkte Drive-API erst bei Bedarf |
-| Texterkennung      | on-device, eigene Segment-Erkennung oder eigenes Modell; **kein** Online-Dienst, **keine** generische OCR |
+| Texterkennung      | on-device, eigene Segment-Erkennung, ohne trainiertes Modell; **kein** Online-Dienst, **keine** generische OCR |
 
 ## Framework
 
@@ -99,9 +99,9 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
   bestimmen → Perspektive korrigieren → je Ziffernposition sieben Segmentflächen abtasten →
   Schwellwert relativ zum Bild (aktiv vs. Geistersegment) → Nachschlagetabelle. Kein Training nötig.
   In der App: `react-native-fast-opencv`.
-- **Fallback: eigenes kleines Modell** je Ziffernzelle (TFLite), trainiert auf den Zellen, die die
-  Segment-Abtastung ausschneidet. In der App: `react-native-fast-tflite`. Spezialisierte Modelle
-  erreichen in Studien an Blutdruckmessgeräten 98–99 %.
+- **Eigenes kleines Modell** je Ziffernzelle (TFLite), trainiert auf den Zellen, die die
+  Segment-Abtastung ausschneidet: geprüft, nur Vergleichswert (s. Ziffernleser). Spezialisierte
+  Modelle erreichen in Studien an Blutdruckmessgeräten 98–99 %.
 
 ### Messlauf
 
@@ -160,6 +160,32 @@ gegen seine direkte Umgebung statt gegen das ganze Bild, Schwelle je Ziffer stat
   Geistersegmenten.
 - Die Fotos entstehen während der Messung ohne Rücksicht auf Bildqualität; ein Sucherrahmen in der
   App senkt die Abweisungen daher kaum. Die Erkennung selbst muss robuster werden.
+
+### Ziffernleser (trainiertes Modell)
+
+Zweistufig: Lage und Ziffernpositionen je Gerät wie bisher, je Ziffernfeld entscheidet ein kleines
+CNN (3 Faltungsschichten, PyTorch) zwischen 0–9 und „leer". Training mit künstlichen Schatten,
+Kabeln, Lage- und Kontrastschwankungen.
+
+Nicht in der App: Sie kommt ohne selbst trainierte KI aus, das Modell bleibt Messlatte.
+
+- **Trainingsdaten:** 914 Fotos bis 31.1.2026, davon 235 von Hand erfasst, der Rest in beiden
+  Messläufen gleich gelesen.
+- **Test:** 499 Fotos ab 1.2.2026, die das Modell nie gesehen hat. „Schwer" sind 77 Fotos, die das
+  Segmentverfahren abgewiesen hatte und die von Hand erfasst sind.
+
+| Verfahren auf Testfotos                     | gelesen | schwer: richtig / falsch / abgewiesen |
+|---------------------------------------------|---------|---------------------------------------|
+| Segmentverfahren                            | 87,0 %  | 0 / 0 / 78                            |
+| Modell, Schwelle 0,5                        | 95,0 %  | 56 / 0 / 22                           |
+| **Modell, Schwelle 0,8**                    | 92,2 %  | 49 / 0 / 29                           |
+| Modell, Schwelle 0,9                        | 89,6 %  | 42 / 0 / 36                           |
+
+- Schwelle = geringste Sicherheit über alle Ziffern eines Fotos, ab der ein Wert gilt.
+- Auf den 400 einfachen Testfotos liest das Modell bei 0,8 397 gleich wie das Segmentverfahren, 3
+  weist es ab. Das zeigt Übereinstimmung, nicht Richtigkeit: Diese Werte stammen selbst vom
+  Segmentverfahren.
+- Kombination beider Verfahren brachte nichts.
 
 ### Plausibilität und Bestätigung
 

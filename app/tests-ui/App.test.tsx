@@ -196,6 +196,24 @@ test('mehrere Fotos: alle werden erkannt, ohne auf die Entscheidung zu warten', 
   expect(foto.recognize).toHaveBeenCalledTimes(3);
 });
 
+test('Fortschritt: rot bestätigt, hellgrau erkannt, Rest ausstehend', async () => {
+  const fotos = [128, 131, 135].map((sys) => ({ ...FOTO, uri: `file:///cache/${sys}.jpg` }));
+  let finish!: (r: Reading) => void;
+  foto.importPhotos.mockResolvedValue(fotos);
+  foto.recognize.mockImplementation((f) => f === fotos[2]
+    ? new Promise((r) => { finish = r; })
+    : Promise.resolve({ values: [Number(f.uri.match(/\d+/)![0]), 85, 64], uncertain: [false, false, false] } as Reading));
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByDisplayValue('128');
+  const breite = (id: string) => screen.getByTestId(id).props.style.width;
+  expect([breite('bestaetigt'), breite('erkannt')]).toEqual(['0%', `${200 / 3}%`]);
+  await act(async () => finish({ values: [135, 85, 64], uncertain: [false, false, false] }));
+  expect(breite('erkannt')).toBe('100%');
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  expect([breite('bestaetigt'), breite('erkannt')]).toEqual([`${100 / 3}%`, '100%']);
+});
+
 test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet nichts', async () => {
   const back = backButton();
   let finish!: (r: Reading) => void;

@@ -70,15 +70,17 @@ Zeitpunkt, und darunter folgt über die ganze Breite eine zweite Zeile, klein au
 
 ### 2. Fortschrittsbalken
 
-4 dp hoch, volle Breite, Grund in `photo`-Grau. Der gefüllte Teil in Herz-Rot `#E53946` zeigt
-`aktuell / gesamt` (3 von 7 sind 43 %).
+4 dp hoch, volle Breite, Grund in `photo`-Grau. Darüber in Herz-Rot `#E53946` die bestätigten
+Fotos, `(aktuell − 1) / gesamt` (3 von 7 sind 29 %); dahinter hellgrau (`erkannt`) zusätzlich so
+viele, wie schon erkannt sind. Der Rest bleibt `photo`-Grau.
 
 **Zählung:** `gesamt` ist die Zahl der Fotos, die mit einem Import oder einer Aufnahme in die
 Warteschlange kamen. `aktuell` ist `gesamt − verbleibende + 1`. Fotos, die als bekannt
 übersprungen werden (Doppelter Import, siehe `ANFORDERUNGEN.md`), zählen mit; der Balken springt
 dann um mehr als einen Schritt.
 
-Ein einzelnes Foto, etwa nach „Foto aufnehmen“, zeigt `Foto 1 von 1` und einen vollen Balken.
+Ein einzelnes Foto, etwa nach „Foto aufnehmen“, zeigt `Foto 1 von 1`; der Balken
+ist grau gefüllt, sobald das Foto erkannt ist, Rot steht auf 0.
 
 Der Ladebildschirm „Erkenne …“ zeigt weder Kopfzeile noch Balken.
 
@@ -135,6 +137,7 @@ In `COLORS` (`app/src/theme.ts`):
 | Zweck | Hell | Dunkel |
 |---|---|---|
 | `focus`, Fokusrand | `#1a5fb4` | `#78aeed` |
+| `erkannt`, erkannte Fotos im Balken | `#b5b5b5` | `#6a6a6a` |
 
 Alles andere nutzt die übrigen Farben: `text` für den Rahmen, `line` für die Trennlinien,
 `sub` für Beschriftung und Zeitpunkt, `uncertain` für unsichere Felder, `photo` für den Grund des

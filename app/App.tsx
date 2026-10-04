@@ -40,6 +40,7 @@ function Main() {
   const [offen, setOffen] = useState<Offen | null>(null);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   const [menue, setMenue] = useState(false);
+  const [erkannt, setErkannt] = useState(new Set<Foto>());
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
   const active = useRef<Foto | null>(null);
   const readings = useRef(new Map<Foto, Promise<Reading>>());
@@ -48,6 +49,7 @@ function Main() {
     if (!p) {
       p = recognize(foto).catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
       readings.current.set(foto, p);
+      p.then(() => setErkannt((s) => new Set(s).add(foto)));
     }
     return p;
   };
@@ -77,6 +79,7 @@ function Main() {
   const next = () => offen && drop(offen.foto);
   const enqueue = (fotos: Foto[]) => {
     setGesamt(fotos.length);
+    setErkannt(new Set());
     setQueue(fotos);
   };
 
@@ -153,7 +156,7 @@ function Main() {
     return (
       <View style={screen}>
         {offen.reading ? (
-          <Bestaetigung key={offen.foto.uri} offen={offen} nr={gesamt - queue.length + 1} gesamt={gesamt} onDone={next} c={c} />
+          <Bestaetigung key={offen.foto.uri} offen={offen} nr={gesamt - queue.length + 1} gesamt={gesamt} bereit={queue.filter((f) => erkannt.has(f)).length} onDone={next} c={c} />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Loader />
@@ -185,7 +188,7 @@ function Main() {
   );
 }
 
-function Bestaetigung({ offen, nr, gesamt, onDone, c }: { offen: Offen; nr: number; gesamt: number; onDone: () => void; c: Colors }) {
+function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; nr: number; gesamt: number; bereit: number; onDone: () => void; c: Colors }) {
   const { foto, reading } = offen;
   const [werte, setWerte] = useState(reading!.values.map((v) => (v === null ? '' : String(v))));
   const [fokus, setFokus] = useState<number | null>(null);
@@ -220,7 +223,8 @@ function Bestaetigung({ offen, nr, gesamt, onDone, c }: { offen: Offen; nr: numb
         </Text>
       )}
       <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
-        <View style={{ width: `${(100 * nr) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
+        <View testID="erkannt" style={{ position: 'absolute', width: `${(100 * (nr - 1 + bereit)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: c.erkannt }} />
+        <View testID="bestaetigt" style={{ position: 'absolute', width: `${(100 * (nr - 1)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
       </View>
       <Image source={{ uri: foto.uri }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" />
       <View style={{ borderWidth: 2, borderColor: c.text, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 12 }}>

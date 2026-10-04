@@ -32,24 +32,39 @@ function Main() {
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
   const active = useRef<Foto | null>(null);
+  const readings = useRef(new Map<Foto, Promise<Reading>>());
+  // nacheinander statt parallel: sonst liegen alle Fotos zugleich in voller Größe im Speicher
+  const lastReading = useRef<Promise<unknown>>(Promise.resolve());
 
-  // nächstes Foto der Warteschlange erkennen
+  const recognizeOnce = (foto: Foto) => {
+    let p = readings.current.get(foto);
+    if (!p) {
+      // Erkennung blockiert den JS-Thread: vorher Anzeige und Eingaben zum Zug kommen lassen
+      p = lastReading.current
+        .then(() => new Promise((r) => setTimeout(r, 50)))
+        .then(() => recognize(foto))
+        .catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
+      readings.current.set(foto, p);
+      lastReading.current = p;
+    }
+    return p;
+  };
+
+  // alle Fotos der Warteschlange erkennen, das erste zur Entscheidung vorlegen
   useEffect(() => {
+    queue.forEach(recognizeOnce);
     if (offen || !queue.length) return;
     const foto = queue[0];
     active.current = foto;
     setOffen({ foto, reading: null });
-    const show = (reading: Reading) => active.current === foto && setOffen({ foto, reading });
-    // Erkennung blockiert den JS-Thread: erst die Anzeige „Erkenne …" zeichnen lassen
-    setTimeout(() => {
-      recognize(foto)
-        .then(show)
-        .catch(() => show({ values: [null, null, null], uncertain: [false, false, false] }));
-    }, 50);
+    recognizeOnce(foto).then((reading) => active.current === foto && setOffen({ foto, reading }));
   }, [queue, offen]);
 
   const next = () => {
-    if (offen) discard(offen.foto);
+    if (offen) {
+      discard(offen.foto);
+      readings.current.delete(offen.foto);
+    }
     active.current = null;
     setOffen(null);
     setQueue((q) => q.slice(1));

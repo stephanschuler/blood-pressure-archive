@@ -125,6 +125,23 @@ test('Zurück-Taste in der Bestätigung verwirft das Foto', async () => {
   expect(db.listMessungen()).toEqual([]);
 });
 
+test('mehrere Fotos: alle werden erkannt, ohne auf die Entscheidung zu warten', async () => {
+  const fotos = [128, 131, 135].map((sys) => ({ ...FOTO, uri: `file:///cache/${sys}.jpg` }));
+  foto.importPhotos.mockResolvedValue(fotos);
+  foto.recognize.mockImplementation(async (f) =>
+    ({ values: [Number(f.uri.match(/\d+/)![0]), 85, 64], uncertain: [false, false, false] }) as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByDisplayValue('128');
+  await act(() => new Promise((r) => setTimeout(r, 200)));
+  expect(foto.recognize.mock.calls.map(([f]) => f)).toEqual(fotos);
+  await fireEvent.press(screen.getByText('Speichern'));
+  expect(screen.getByDisplayValue('131')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByText('Speichern'));
+  expect(screen.getByDisplayValue('135')).toBeOnTheScreen();
+  expect(foto.recognize).toHaveBeenCalledTimes(3);
+});
+
 test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet nichts', async () => {
   const back = backButton();
   let finish!: (r: Reading) => void;

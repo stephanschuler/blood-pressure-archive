@@ -6,7 +6,7 @@ import { Animated, PanResponder, Platform, Pressable, SectionList, Text, View, t
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
-  AUSWAHL, filtern, gliedern, mittel, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt, zwischen,
+  AUSWAHL, filtern, gliedern, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt, zwischen,
   type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
 import { getSetting, setSetting } from './db';
@@ -27,11 +27,9 @@ const uhr = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 // Wochenzeile und Spaltenkopf richten sich danach aus.
 const BLATT = 36;
 const VOR_WERTEN = BLATT + 10 + 12 + 6 + 16 + 6 + 42;
-// Kurvenleiste am rechten Rand; berührt wird sie breit und überdeckt die Wertspalten
 const LEISTE = 40;
-const LEISTE_BREIT = 136;
 
-type Sichtbar = (oben: Date, unten: Date) => void;
+type Sichtbar = (oben: Date) => void;
 
 export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c: Colors; onDelete: (p: Messpunkt) => void }) {
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
@@ -52,7 +50,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
     const tage = viewableItems.flatMap((v) => (v.item?.art === 'tag' ? [v.item.tag] : []));
     if (!tage.length) return;
     oben.current = tage[0];
-    sichtbar.current?.(tage[0], tage[tage.length - 1]);
+    sichtbar.current?.(tage[0]);
   }).current;
   if (!messungen.length) return <Text style={{ flex: 1, color: c.sub }}>Noch keine Messungen.</Text>;
 
@@ -341,18 +339,17 @@ type LeisteProps = { abschnitte: Abschnitt[]; von: Date; heute: Date; sichtbar: 
 /** Wochenmittel über die ganze Zeit, oben heute; zeigt den sichtbaren Ausschnitt, Antippen und Ziehen springt. */
 function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeisteProps) {
   const [hoehe, setHoehe] = useState(0);
-  const [breit, setBreit] = useState(false);
   const [aktiv, setAktiv] = useState(false);
-  const [bereich, setBereich] = useState<[Date, Date]>([heute, heute]);
-  const [blase, setBlase] = useState<{ y: number; titel: string; text: string } | null>(null);
+  const [oben, setOben] = useState(heute);
+  const [blase, setBlase] = useState<{ y: number; titel: string } | null>(null);
   const wochen = useMemo(() => abschnitte.flatMap((a) => a.data.filter((z): z is Woche => z.art === 'woche')), [abschnitte]);
   const monat = useRef(-1);
   const start = useRef(0);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>;
-    sichtbar.current = (oben, unten) => {
-      setBereich([oben, unten]);
+    sichtbar.current = (d) => {
+      setOben(d);
       setAktiv(true);
       clearTimeout(t);
       t = setTimeout(() => setAktiv(false), 1500);
@@ -370,23 +367,18 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
     const d = new Date(heute.getTime() - (Math.min(Math.max(py, 0), hoehe) / hoehe) * spanne);
     const tag = onZiel(d);
     if (!tag) return;
-    setBereich([tag.tag, tag.tag]);
+    setOben(tag.tag);
     const k = monatsnummer(tag.tag);
     if (k !== monat.current) {
       monat.current = k;
       ticken();
     }
-    const tage = abschnitte.find((a) => monatsnummer(a.monat) === k)!.data.flatMap((z) => (z.art === 'tag' ? z.messungen : []));
-    const m = mittel(tage)!;
-    setBlase({ y: Math.min(Math.max(py, 24), hoehe - 24), titel: `${MONAT_LANG[tag.tag.getMonth()]} ${tag.tag.getFullYear()}`, text: `Ø ${m.sys}/${m.dia} · ${tage.length} Mess.` });
+    setBlase({ y: Math.min(Math.max(py, 24), hoehe - 24), titel: `${WOCHENTAG[tag.tag.getDay()]} ${datum(tag.tag)}${tag.tag.getFullYear()}` });
   };
   // PanResponder entsteht einmal; ziehen dagegen hängt an Höhe und Daten des letzten Renderns
   const aktuell = useRef(ziehen);
   aktuell.current = ziehen;
-  const loslassen = () => {
-    setBreit(false);
-    setBlase(null);
-  };
+  const loslassen = () => setBlase(null);
   const pan = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -394,7 +386,6 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
     onPanResponderGrant: (e) => {
       start.current = e.nativeEvent.locationY;
       monat.current = -1;
-      setBreit(true);
       aktuell.current(start.current);
     },
     onPanResponderMove: (_, g) => aktuell.current(start.current + g.dy),
@@ -402,15 +393,9 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
     onPanResponderTerminate: loslassen,
   })).current;
 
-  const w = breit ? LEISTE_BREIT : LEISTE;
-  const links = breit ? 6 : 3;
-  const rechts = w - (breit ? 30 : 3);
-  const x = (v: number) => links + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (rechts - links);
+  const x = (v: number) => 3 + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (LEISTE - 6);
   const jahre: number[] = [];
   for (let j = von.getFullYear() + 1; j <= heute.getFullYear(); j++) jahre.push(j);
-  const bandOben = y(bereich[0]);
-  const bandHoehe = Math.max(6, y(bereich[1]) - bandOben);
-  const oben = bereich[0];
 
   return (
     <>
@@ -422,37 +407,28 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
         accessibilityValue={{ text: `${MONAT_LANG[oben.getMonth()]} ${oben.getFullYear()}` }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => onZiel(new Date(oben.getFullYear(), oben.getMonth() + (e.nativeEvent.actionName === 'increment' ? 2 : 0), 0))}
-        style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: w, backgroundColor: c.bg, borderLeftWidth: breit ? 0 : 1, borderColor: c.line, elevation: breit ? 6 : 0 }}
+        style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: LEISTE, backgroundColor: c.bg, borderLeftWidth: 1, borderColor: c.line }}
       >
         {hoehe > 0 && (
-          <Svg width={w} height={hoehe}>
-            {[80, 140].map((v) => (
-              <Fragment key={v}>
-                <Line x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />
-                {breit && <SvgText x={x(v) + 3} y={hoehe - 4} fontSize={9} fill={c.sub}>{v}</SvgText>}
-              </Fragment>
-            ))}
+          <Svg width={LEISTE} height={hoehe}>
+            {[80, 140].map((v) => <Line key={v} x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />)}
             {(['sys', 'dia'] as const).map((k) => (
-              <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={breit ? 1.4 : 1.1} />
+              <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.1} />
             ))}
-            {breit && <SvgText x={w - 3} y={13} fontSize={11} fontWeight="700" fill={c.text} textAnchor="end">{heute.getFullYear()}</SvgText>}
             {jahre.map((j) => (
               <Fragment key={j}>
-                <Line x1={0} x2={w} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
-                {breit
-                  ? <SvgText x={w - 3} y={y(new Date(j, 0, 1)) + 13} fontSize={11} fontWeight="700" fill={c.text} textAnchor="end">{j - 1}</SvgText>
-                  : <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>}
+                <Line x1={0} x2={LEISTE} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
+                <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>
               </Fragment>
             ))}
           </Svg>
         )}
-        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: bandOben, height: bandHoehe, backgroundColor: 'rgba(229,57,70,0.2)', borderTopWidth: 1, borderBottomWidth: 1, borderColor: ROT }} />
-        <View pointerEvents="none" style={{ position: 'absolute', left: -9, width: 18, height: 28, borderRadius: 9, backgroundColor: ROT, top: bandOben + bandHoehe / 2 - 14, opacity: breit || aktiv ? 1 : 0.55, elevation: 2 }} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: y(oben) - 1, height: 2, backgroundColor: ROT }} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: -9, width: 18, height: 28, borderRadius: 9, backgroundColor: ROT, top: y(oben) - 14, opacity: blase || aktiv ? 1 : 0.55, elevation: 2 }} />
       </View>
       {blase && (
-        <View pointerEvents="none" style={{ position: 'absolute', right: LEISTE_BREIT + 12, top: blase.y - 22, backgroundColor: ROT, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 12, elevation: 4 }}>
+        <View pointerEvents="none" style={{ position: 'absolute', right: LEISTE + 12, top: blase.y - 16, backgroundColor: ROT, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 12, elevation: 4 }}>
           <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{blase.titel}</Text>
-          <Text style={{ color: '#fff', fontSize: 11 }}>{blase.text}</Text>
         </View>
       )}
     </>

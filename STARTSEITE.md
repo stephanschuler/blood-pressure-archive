@@ -132,12 +132,11 @@ ein.
 - **Inhalt:** SYS und DIA als Kurve der Wochenmittel über die ganze Zeit, oben heute, unten die
   älteste Messung, linear in der Zeit. Gestrichelt 80 und 140 mmHg, waagerechte Linien an jedem
   Jahreswechsel mit `’25` darunter. Die Auswahl der Tageshälfte filtert auch hier.
-- **Ausschnitt:** ein rotes Band markiert die sichtbaren Tage, mindestens 6 dp hoch, am linken Rand
-  ein roter Griff. Scrollt die Liste, ist der Griff voll sichtbar, sonst halb durchsichtig.
+- **Position:** ein roter Strich markiert den obersten sichtbaren Tag, darauf am linken Rand ein
+  roter Griff. Scrollt die Liste, ist der Griff voll sichtbar, sonst halb durchsichtig.
 - **Antippen und Ziehen:** springt zum Tag unter dem Finger, ohne Messung zum nächstälteren.
-  Solange der Finger liegt, ist die Leiste 136 dp breit und überdeckt die Wertspalten: Beschriftung
-  80/140, Jahreszahlen ausgeschrieben. Links davon eine rote Blase mit Monat, Ø SYS/DIA und Zahl
-  der Messungen des Monats.
+  Die Leiste bleibt dabei 40 dp breit. Links davon eine rote Blase mit dem Datum des Tags, auf dem
+  die Liste landet, etwa „Mi 10.04.2024“.
 - **Haptik:** ein kurzer Tick bei jedem Monatswechsel unter dem Finger.
 - **Bedienungshilfe:** einstellbares Element „Zeitleiste“; hoch und runter wechselt den Monat.
 

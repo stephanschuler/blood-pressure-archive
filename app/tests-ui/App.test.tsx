@@ -49,7 +49,8 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   expect(puls).toHaveStyle({ backgroundColor: '#fff3b0' });
   expect(screen.getByDisplayValue('128')).not.toHaveStyle({ backgroundColor: '#fff3b0' });
   await fireEvent.press(screen.getByLabelText('Speichern'));
-  expect(await screen.findByText('128/85 · Puls 64')).toBeOnTheScreen();
+  expect(await screen.findByText('1 Pkt.')).toBeOnTheScreen();
+  expect(screen.getAllByText('128').length).toBeGreaterThan(0);
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
 });
 
@@ -70,14 +71,33 @@ test('Messpunkt lange drücken, Rückfrage bestätigen: gelöscht', async () => 
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await render(<App />);
-  await fireEvent(screen.getByText('130/85/60'), 'longPress');
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  const punkt = screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/);
+  await fireEvent(punkt, 'longPress');
   expect(alert).toHaveBeenCalledWith('Messpunkt löschen?', expect.any(String), expect.any(Array));
   const loeschen = alert.mock.calls[0][2]!.find((b) => b.text === 'Löschen')!;
-  await fireEvent.press(screen.getByText('130/85/60')); // kurzes Tippen löscht nicht
+  await fireEvent.press(punkt); // kurzes Tippen löscht nicht
   expect(db.listMessungen()).toHaveLength(1);
   await act(async () => loeschen.onPress!());
   expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(db.listMessungen()).toEqual([]);
+});
+
+test('Umschalter Tageshälfte filtert die Liste und wird gespeichert; Messung klappt auf', async () => {
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 19).toISOString(), sys: 140, dia: 90, puls: 70 });
+  db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 19, 2).toISOString(), sys: 144, dia: 92, puls: 72 });
+  await render(<App />);
+  expect(screen.getByText('1 Pkt.')).toBeOnTheScreen();
+  expect(screen.getByText('2 Pkt.')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Vormittag' }));
+  expect(screen.queryByText('2 Pkt.')).toBeNull();
+  expect(db.getSetting('tageshaelfte')).toBe('vormittag');
+  await fireEvent.press(screen.getByRole('button', { name: 'Nachmittag' }));
+  expect(screen.queryByText('1 Pkt.')).toBeNull();
+  expect(screen.queryByLabelText(/^Messpunkt/)).toBeNull();
+  await fireEvent.press(screen.getByText('2 Pkt.'));
+  expect(screen.getAllByLabelText(/^Messpunkt/)).toHaveLength(2);
 });
 
 test('Darstellung wechselt reihum und wird gespeichert', async () => {

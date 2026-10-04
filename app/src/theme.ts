@@ -13,7 +13,9 @@ export function parseTheme(value: string | null): Theme {
 }
 
 export const COLORS = {
-  light: { bg: '#fff', text: '#111', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0' },
-  dark: { bg: '#121212', text: '#eee', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00' },
+  light: { bg: '#fff', text: '#111', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0',
+    vormittag: '#d97706', nachmittag: '#6d4fd8', sys: '#c62828', dia: '#1f6feb', up: '#d32f2f', down: '#2e9d5b' },
+  dark: { bg: '#121212', text: '#eee', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00',
+    vormittag: '#f5a524', nachmittag: '#9d86ff', sys: '#ef6b6b', dia: '#58a6ff', up: '#ef5350', down: '#4cc27a' },
 };
 export type Colors = typeof COLORS.light;

@@ -1,12 +1,13 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Appearance, BackHandler, Easing, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Alert, Animated, Appearance, BackHandler, Easing, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMesspunkt, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
+import { Startseite } from './src/startseite';
 import { COLORS, THEME_LABEL, nextTheme, parseTheme, type Colors, type Theme } from './src/theme';
 
 migrate();
@@ -125,28 +126,7 @@ function Main() {
           <Text style={{ color: c.sub }}>Darstellung: {THEME_LABEL[theme]}</Text>
         </Pressable>
       </View>
-      <FlatList
-        style={{ flex: 1 }}
-        data={messungen}
-        keyExtractor={(m) => String(m.punkte[0].id)}
-        ListEmptyComponent={<Text style={{ color: c.sub }}>Noch keine Messungen.</Text>}
-        ListFooterComponent={messungen.length ? <Text style={{ color: c.sub, marginVertical: 12 }}>Messpunkt lange drücken, um ihn zu löschen.</Text> : null}
-        renderItem={({ item: m }) => (
-          <View style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: c.line }}>
-            <Text style={{ color: c.sub }}>{new Date(m.punkte[0].zeit).toLocaleString('de-DE')}</Text>
-            <Text style={{ fontSize: 22, fontWeight: '600', color: c.text, marginVertical: 2 }}>
-              {m.sys}/{m.dia} · Puls {m.puls}
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {m.punkte.map((p) => (
-                <Pressable key={p.id} onLongPress={() => askDelete(p)} style={{ backgroundColor: c.chip, borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8 }}>
-                  <Text style={{ color: c.sub }}>{p.sys}/{p.dia}/{p.puls}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-      />
+      <Startseite messungen={messungen} c={c} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => setQueue(await importPhotos())} />

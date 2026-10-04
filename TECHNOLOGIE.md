@@ -105,7 +105,8 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 - **Erster Kandidat: Segment-Abtastung bei festem Layout.** Grüne Taste finden → Display-Rechteck
   bestimmen → Perspektive korrigieren → je Ziffernposition sieben Segmentflächen abtasten →
   Schwellwert relativ zum Bild (aktiv vs. Geistersegment) → Nachschlagetabelle. Kein Training nötig.
-  In der App: `react-native-fast-opencv`.
+  In der App: reines TypeScript (`app/src/erkennung/`); `react-native-fast-opencv` geprüft und
+  verworfen.
 - **Eigenes kleines Modell** je Ziffernzelle (TFLite), trainiert auf den Zellen, die die
   Segment-Abtastung ausschneidet: geprüft, nur Vergleichswert (s. Ziffernleser). Spezialisierte
   Modelle erreichen in Studien an Blutdruckmessgeräten 98–99 %.
@@ -292,6 +293,18 @@ Bestätigungsmaske zeigen. Dann bleibt die Lesequote bei 87,5 %, und die Hälfte
 | zusätzlich Mehrdeutigkeitsprüfung 0,2            | 86,1 %          | 157 / 5                         |
 
 (Handerfassung mit korrigiertem Tippfehler.)
+
+### Erkennung in der App (TypeScript)
+
+`app/src/erkennung/`: reines TypeScript ohne OpenCV, läuft in der App (Hermes) und in Node.
+`image.ts` (Bildoperationen), `display.ts` (Taste und Displayränder), `segments.ts` (Raster,
+Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" mit Abstand 0,2).
+
+- Eingabe wie in der App: Foto EXIF-gedreht, lange Seite 1.200 px, JPEG. In der App verkleinert
+  `expo-image-manipulator` (Glide wendet die EXIF-Drehung an), `jpeg-js` dekodiert.
+- `make test`: Unit-Tests mit künstlichen Daten (`app/tests/`), ohne Fotos; dürfen ins Repo.
+- Beschleunigt: Kantenfilter einmal für alle drei Schwellen (0,8 → 0,45 s, Ergebnis unverändert).
+  Verworfen: Display-Kandidaten auf halber Auflösung (0,33 s, aber 84,3 % statt 87,7 % gelesen).
 
 ### Plausibilität und Bestätigung
 

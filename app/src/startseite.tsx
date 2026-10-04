@@ -178,7 +178,7 @@ function Tagesbogen({ haelfte, c }: { haelfte: Tageshaelfte; c: Colors }) {
 function Trend({ wert, bezug, c }: { wert: number; bezug?: number; c: Colors }) {
   if (bezug === undefined) return null;
   const d = wert - bezug;
-  return <Text style={{ fontSize: 11, color: d > 0 ? c.up : d < 0 ? c.down : c.sub }}>{d > 0 ? '▲' : d < 0 ? '▼' : '•'}{Math.abs(d)}</Text>;
+  return <Text style={{ fontSize: 11, color: d > 2 ? c.up : d < -2 ? c.down : c.sub }}>{d > 0 ? '▲' : d < 0 ? '▼' : '•'}{Math.abs(d)}</Text>;
 }
 
 function Kennzahl({ auswahl, mittel, vorwoche, c }: { auswahl: Auswahl; mittel: Werte | null; vorwoche: Werte | null; c: Colors }) {

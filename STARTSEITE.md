@@ -163,7 +163,8 @@ In `COLORS` (`app/src/theme.ts`), je Hell und Dunkel:
 | Pfeil höher | `#d32f2f` | `#ef5350` |
 | Pfeil niedriger | `#2e9d5b` | `#4cc27a` |
 
-Gleich (`• 0`) bleibt grau (`sub`). Beim Puls färben die Pfeile genauso wie beim Blutdruck.
+Differenzen bis ±2 bleiben grau (`sub`), auch mit Pfeil. Beim Puls färben die Pfeile genauso wie
+beim Blutdruck.
 
 ## Leere Zustände
 

@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Blood Pressure Archive",
+    "slug": "blood-pressure-archive",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "de.g4n.bloodpressurearchive"
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false,
+      "package": "de.g4n.bloodpressurearchive"
+    }
+  }
+}

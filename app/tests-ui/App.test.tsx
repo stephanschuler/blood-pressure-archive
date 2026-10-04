@@ -67,6 +67,33 @@ test('Speichern erst, wenn alle Felder gefüllt sind', async () => {
   expect(db.listMessungen().map((m) => [m.sys, m.dia, m.puls])).toEqual([[128, 85, 64]]);
 });
 
+test('Tastatur öffnet im ersten unsicheren Feld, bei sicheren Werten gar nicht', async () => {
+  foto.importPhotos.mockResolvedValue([FOTO, { ...FOTO, uri: 'file:///cache/zwei.jpg' }]);
+  foto.recognize
+    .mockResolvedValueOnce({ values: [128, 85, 64], uncertain: [false, true, true] } as Reading)
+    .mockResolvedValueOnce({ values: [131, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByDisplayValue('128');
+  expect(['SYS', 'DIA', 'PUL'].map((l) => screen.getByLabelText(l).props.autoFocus)).toEqual([false, true, false]);
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  await screen.findByDisplayValue('131');
+  expect(['SYS', 'DIA', 'PUL'].map((l) => screen.getByLabelText(l).props.autoFocus)).toEqual([false, false, false]);
+});
+
+test('Weiter im letzten Feld speichert, solange kein Feld ungültig ist', async () => {
+  foto.takePhoto.mockResolvedValue([FOTO]);
+  foto.recognize.mockResolvedValue({ values: [128, null, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
+  await screen.findByDisplayValue('128');
+  await fireEvent(screen.getByLabelText('PUL'), 'submitEditing');
+  expect(db.listMessungen()).toEqual([]);
+  await fireEvent.changeText(screen.getByLabelText('DIA'), '85');
+  await fireEvent(screen.getByLabelText('DIA'), 'submitEditing');
+  expect(db.listMessungen().map((m) => [m.sys, m.dia, m.puls])).toEqual([[128, 85, 64]]);
+});
+
 test('Messpunkt lange drücken, Rückfrage bestätigen: gelöscht', async () => {
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -153,10 +180,12 @@ test('mehrere Fotos: alle werden erkannt, ohne auf die Entscheidung zu warten', 
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Fotos importieren'));
   await screen.findByDisplayValue('128');
+  expect(screen.getByText('Foto 1 von 3')).toBeOnTheScreen();
   await act(() => new Promise((r) => setTimeout(r, 200)));
   expect(foto.recognize.mock.calls.map(([f]) => f)).toEqual(fotos);
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(screen.getByDisplayValue('131')).toBeOnTheScreen();
+  expect(screen.getByText('Foto 2 von 3')).toBeOnTheScreen();
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(screen.getByDisplayValue('135')).toBeOnTheScreen();
   expect(foto.recognize).toHaveBeenCalledTimes(3);
@@ -185,7 +214,7 @@ test('Import eines schon gespeicherten Messpunkts: ohne Bestätigung übersprung
   await fireEvent.press(screen.getByLabelText('Fotos importieren'));
   await screen.findByDisplayValue('128');
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
-  expect(screen.queryByText(/weitere Fotos/)).toBeNull();
+  expect(screen.getByText('Foto 2 von 2')).toBeOnTheScreen();
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen().map((m) => m.punkte.length)).toEqual([1, 1]);
 });

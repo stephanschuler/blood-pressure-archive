@@ -33,6 +33,7 @@ function Main() {
   const insets = useSafeAreaInsets();
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
   const [queue, setQueue] = useState<Foto[]>([]);
+  const [gesamt, setGesamt] = useState(0);
   const [offen, setOffen] = useState<Offen | null>(null);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
@@ -76,6 +77,10 @@ function Main() {
     setMessungen(listMessungen());
   };
   const next = () => offen && drop(offen.foto);
+  const enqueue = (fotos: Foto[]) => {
+    setGesamt(fotos.length);
+    setQueue(fotos);
+  };
 
   // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
   useEffect(() => {
@@ -106,7 +111,7 @@ function Main() {
     return (
       <View style={screen}>
         {offen.reading ? (
-          <Bestaetigung key={offen.foto.uri} offen={offen} rest={queue.length - 1} onDone={next} c={c} />
+          <Bestaetigung key={offen.foto.uri} offen={offen} nr={gesamt - queue.length + 1} gesamt={gesamt} onDone={next} c={c} />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Loader />
@@ -129,52 +134,79 @@ function Main() {
       <Startseite messungen={messungen} c={c} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
-        <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => setQueue(await importPhotos())} />
-        <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => setQueue(await takePhoto())} />
+        <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
+        <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
       <StatusBar style="auto" />
     </View>
   );
 }
 
-function Bestaetigung({ offen, rest, onDone, c }: { offen: Offen; rest: number; onDone: () => void; c: Colors }) {
+function Bestaetigung({ offen, nr, gesamt, onDone, c }: { offen: Offen; nr: number; gesamt: number; onDone: () => void; c: Colors }) {
   const { foto, reading } = offen;
   const [werte, setWerte] = useState(reading!.values.map((v) => (v === null ? '' : String(v))));
+  const [fokus, setFokus] = useState<number | null>(null);
+  const felder = useRef<(TextInput | null)[]>([]);
   const zahlen = werte.map((w) => (/^\d{2,3}$/.test(w) ? Number(w) : null));
   const gueltig = zahlen.every((z) => z !== null);
+  const markiert = zahlen.map((z, i) => reading!.uncertain[i] || z === null);
 
   const speichern = () => {
     insertMesspunkt({ zeit: foto.zeit.toISOString(), sys: zahlen[0]!, dia: zahlen[1]!, puls: zahlen[2]! });
     onDone();
   };
 
+  const weiter = (i: number) => {
+    const unten = markiert.findIndex((m, j) => m && j > i);
+    if (unten >= 0) felder.current[unten]?.focus();
+    else if (gueltig) speichern();
+    else felder.current[zahlen.indexOf(null)]?.focus();
+  };
+
   return (
     <View style={{ flex: 1 }}>
-      <Image source={{ uri: foto.uri }} style={{ width: '100%', height: 280, backgroundColor: c.photo }} resizeMode="contain" />
-      <Text style={{ color: c.sub, marginVertical: 6 }}>
-        {foto.zeit.toLocaleString('de-DE')}
-        {foto.zeitAusExif ? '' : ' (Zeitpunkt nicht im Foto, jetzt angenommen)'}
-      </Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
+        <Text style={{ color: c.sub }}>
+          {foto.zeit.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+      {!foto.zeitAusExif && (
+        <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
+          Zeitpunkt nicht im Foto, jetzt angenommen
+        </Text>
+      )}
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
+        <View style={{ width: `${(100 * nr) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
+      </View>
+      <Image source={{ uri: foto.uri }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" />
+      <View style={{ borderWidth: 2, borderColor: c.text, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 12 }}>
         {['SYS', 'DIA', 'PUL'].map((label, i) => (
-          <View key={label} style={{ flex: 1 }}>
-            <Text style={{ color: c.sub, marginBottom: 4 }}>{label}</Text>
+          <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderColor: c.line }}>
+            <Text style={{ width: 40, color: c.sub }}>{label}</Text>
             <TextInput
+              ref={(r) => { felder.current[i] = r; }}
+              accessibilityLabel={label}
               value={werte[i]}
               onChangeText={(t) => setWerte((w) => w.map((x, j) => (j === i ? t : x)))}
               keyboardType="number-pad"
               maxLength={3}
+              autoFocus={i === markiert.indexOf(true)}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => weiter(i)}
+              onFocus={() => setFokus(i)}
+              onBlur={() => setFokus(null)}
               style={{
-                fontSize: 32, borderWidth: 1, borderRadius: 8, padding: 8, textAlign: 'center', color: c.text,
-                backgroundColor: reading!.uncertain[i] || zahlen[i] === null ? c.uncertain : c.field,
-                borderColor: reading!.uncertain[i] || zahlen[i] === null ? '#d4a017' : c.fieldLine,
+                flex: 1, fontSize: i < 2 ? 44 : 32, textAlign: 'right', paddingVertical: 2, paddingHorizontal: 8,
+                borderWidth: 2, borderRadius: 8, color: c.text,
+                backgroundColor: markiert[i] ? c.uncertain : 'transparent',
+                borderColor: fokus === i ? c.focus : 'transparent',
               }}
             />
           </View>
         ))}
       </View>
-      {rest > 0 && <Text style={{ color: c.sub, marginTop: 8 }}>Noch {rest} weitere Fotos</Text>}
-      <View style={{ flex: 1 }} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         <IconButton label="Verwerfen" icon={require('./assets/delete.png')} onPress={onDone} />
         <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />

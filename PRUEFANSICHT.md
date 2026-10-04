@@ -1,10 +1,10 @@
 # Prüfansicht: erkannte Werte bestätigen
 
-Entwurf zum Review, noch nicht umgesetzt. Vorlage ist der Entwurf „A Basis“ aus Runde 2 auf der
-Design-Leinwand <https://claude.ai/artifact/TxwJFHoStrbFfsfegEVAkm>. Er kombiniert den
-Display-Rahmen aus Entwurf 04, den Fortschrittsbalken aus 22 und die Tastatur aus 18.
+Vorlage ist der Entwurf „A Basis“ aus Runde 2 auf der Design-Leinwand
+<https://claude.ai/artifact/TxwJFHoStrbFfsfegEVAkm>. Er kombiniert den Display-Rahmen aus
+Entwurf 04, den Fortschrittsbalken aus 22 und die Tastatur aus 18.
 
-Betroffen ist `Bestaetigung` in `app/App.tsx`: die Ansicht, die nach der Erkennung je Foto
+Umgesetzt in `Bestaetigung` (`app/App.tsx`): die Ansicht, die nach der Erkennung je Foto
 erscheint, bevor ein Messpunkt gespeichert oder das Foto verworfen wird.
 
 ## Ziel

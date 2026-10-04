@@ -302,6 +302,17 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 
 - Eingabe wie in der App: Foto EXIF-gedreht, lange Seite 1.200 px, JPEG. In der App verkleinert
   `expo-image-manipulator` (Glide wendet die EXIF-Drehung an), `jpeg-js` dekodiert.
+- Messung am Archiv (`make test-archiv`, 4.10.2026):
+
+| Kennzahl                                         | Wert                                  |
+|--------------------------------------------------|---------------------------------------|
+| gelesen (1.510)                                  | 87,7 % (Python: 87,0 %)               |
+| Handerfassung (330): richtig / falsch            | 171 / 8, davon 4 als unsicher markiert |
+| beide lesen, gleicher Wert wie Python            | 1.289 von 1.291                       |
+| Zeit je Foto in Node (allein)                    | etwa 0,45 s; auf dem Handy (Hermes) noch ungemessen |
+
+- `make test-archiv` schlägt fehl unter 87,0 % gelesen oder bei mehr als 4 unmarkiert falschen
+  Werten in der Handerfassung (`ocr-prototyp/auswertung_ts.py`).
 - `make test`: Unit-Tests mit künstlichen Daten (`app/tests/`), ohne Fotos; dürfen ins Repo.
 - Beschleunigt: Kantenfilter einmal für alle drei Schwellen (0,8 → 0,45 s, Ergebnis unverändert).
   Verworfen: Display-Kandidaten auf halber Auflösung (0,33 s, aber 84,3 % statt 87,7 % gelesen).

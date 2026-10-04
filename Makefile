@@ -1,8 +1,11 @@
 COMPOSE := docker compose
 ANDROID := $(COMPOSE) run --rm android
 NODE    := $(COMPOSE) run --rm node
+OCR     := $(COMPOSE) run --rm ocr
+OUT     := daten/messlauf
+PARTS   := 12
 
-.PHONY: help images install apk serve-apk typecheck test
+.PHONY: help images install apk serve-apk typecheck test test-archiv klein
 
 help: ## Befehle anzeigen
 	@awk -F':.*## ' '/^[a-z-]+:.*## / { printf "  make %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -24,3 +27,12 @@ typecheck: ## TypeScript prüfen
 
 test: typecheck ## Unit-Tests (künstliche Daten, ohne Fotos)
 	$(NODE) sh -c 'npx --yes tsx --test tests/*.test.ts'
+
+klein: ## Fotos aus daten/ verkleinert ablegen, Eingabe für test-archiv
+	$(OCR) python export_klein.py
+
+test-archiv: klein ## Erkennung am Fotoarchiv messen; schlägt fehl, wenn die Qualität sinkt
+	$(NODE) sh -c 'rm -rf /work/$(OUT)/ts && mkdir -p /work/$(OUT)/ts \
+	  && for i in $$(seq 0 $$(($(PARTS) - 1))); do \
+	       npx --yes tsx tools/messlauf.ts /work/$(OUT)/klein $$i $(PARTS) /work/$(OUT)/ts/teil$$i.csv & done; wait'
+	$(OCR) python auswertung_ts.py --pruefen

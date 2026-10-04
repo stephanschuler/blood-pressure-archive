@@ -20,6 +20,16 @@ services:
       - .:/work
       - npm-arm:/root/.npm
 
+  # Archivtest: Fotos verkleinern und Ergebnisse auswerten (ocr-prototyp/).
+  ocr:
+    build: ocr-prototyp
+    image: blutdruck-ocr
+    working_dir: /work
+    volumes:
+      - ./ocr-prototyp:/work
+      - ./daten:/daten
+      - ./daten/messlauf:/out
+
 volumes:
   android-sdk: { name: blutdruck-android-sdk }
   gradle: { name: blutdruck-gradle }

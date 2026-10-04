@@ -22,3 +22,5 @@ png delete                     96   96 delete.png
 png menu                       72   72 menu.png
 png download                   72   72 download.png
 png upload-file                72   72 upload-file.png
+png csv                        72   72 csv.png
+png add-to-drive               72   72 add-to-drive.png

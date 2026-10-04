@@ -140,6 +140,9 @@ test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   expect(db.getSetting('theme')).toBe('dark');
   expect(screen.getByRole('button', { name: 'Dunkel', selected: true })).toBeOnTheScreen();
   expect(screen.getByText('Version Entwicklung')).toBeOnTheScreen();
+  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'In Google Drive ablegen']) {
+    expect(screen.getByRole('button', { name })).toBeOnTheScreen();
+  }
 });
 
 /** Zurück-Taste nachbilden: angemeldete Handler abfangen, den zuletzt angemeldeten auslösen. */

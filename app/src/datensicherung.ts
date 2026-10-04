@@ -1,5 +1,6 @@
-// Dateien über die Dialoge von Android: Ordner zum Speichern, Datei zum Einspielen.
-import { Directory, File } from 'expo-file-system';
+// Dateien über die Dialoge von Android: Ordner zum Speichern, Datei zum Einspielen, Teilen-Blatt.
+import { Directory, File, Paths } from 'expo-file-system';
+import { shareAsync } from 'expo-sharing';
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 
@@ -22,4 +23,12 @@ export async function inOrdnerSpeichern(name: string, mime: string, inhalt: stri
 export async function dateiOeffnen(): Promise<Uint8Array | null> {
   const { result } = await File.pickFileAsync({});
   return result ? result.bytes() : null;
+}
+
+/** Teilen-Blatt von Android, etwa „In Drive speichern“. */
+export async function teilen(name: string, mime: string, inhalt: string) {
+  const datei = new File(Paths.cache, name);
+  datei.create({ overwrite: true });
+  datei.write(inhalt);
+  await shareAsync(datei.uri, { mimeType: mime, dialogTitle: name });
 }

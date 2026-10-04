@@ -4,12 +4,13 @@ import { Alert, Animated, Appearance, BackHandler, Easing, Image, Pressable, Tex
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
-import { dateiOeffnen, dateiname, inOrdnerSpeichern } from './src/datensicherung';
+import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
 import type { Messpunkt } from './src/messung';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
+import { csv } from './src/tabelle';
 import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 
 migrate();
@@ -109,6 +110,7 @@ function Main() {
 
   // jeder Fehler sichtbar: sonst verlässt sich der Nutzer auf eine Sicherung, die es nicht gibt
   const versuchen = (titel: string, aktion: () => Promise<unknown>) => () => aktion().catch((e) => Alert.alert(titel, String(e)));
+  const tabelle = () => csv(messungen.flatMap((m) => m.punkte));
   const eintraege: Eintrag[] = [
     {
       abschnitt: 'Datensicherung', label: 'Speichern', icon: require('./assets/download.png'),
@@ -131,6 +133,16 @@ function Main() {
         setMessungen(listMessungen());
         Alert.alert('Eingespielt', `${r.gelesen} Messpunkte gelesen, ${r.neu} neu übernommen.`);
       }),
+    },
+    {
+      abschnitt: 'Tabelle', label: 'Als CSV speichern', icon: require('./assets/csv.png'),
+      onPress: versuchen('Nicht gespeichert', async () => {
+        if (await inOrdnerSpeichern(dateiname('csv'), 'text/csv', tabelle())) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
+      }),
+    },
+    {
+      abschnitt: 'Tabelle', label: 'In Google Drive ablegen', icon: require('./assets/add-to-drive.png'),
+      onPress: versuchen('Nicht geteilt', () => teilen(dateiname('csv'), 'text/csv', tabelle())),
     },
   ];
 

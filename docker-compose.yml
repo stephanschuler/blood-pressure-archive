@@ -20,6 +20,15 @@ services:
       - .:/work
       - npm-arm:/root/.npm
 
+  # Erkennung unter derselben Hermes-VM wie in der App messen: natives arm64.
+  hermes:
+    build: { context: buildenv, dockerfile: hermes.Dockerfile }
+    image: blutdruck-hermes
+    working_dir: /work/app
+    volumes:
+      - .:/work
+      - npm-arm:/root/.npm
+
   # PNGs aus SVG: App-Icons und Ladeanimation (app/assets/svg/).
   svg:
     build: { context: buildenv, dockerfile: svg.Dockerfile }

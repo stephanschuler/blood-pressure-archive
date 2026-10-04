@@ -328,10 +328,16 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 | gelesen (1.510)                                  | 87,7 % (Python: 87,0 %)               |
 | Handerfassung (330): richtig / falsch            | 171 / 8, davon 4 als unsicher markiert |
 | beide lesen, gleicher Wert wie Python            | 1.289 von 1.291                       |
-| Zeit je Foto in Node (allein)                    | etwa 0,45 s; auf dem Handy (Hermes) noch ungemessen |
+| Zeit je Foto in Node (allein)                    | etwa 0,45 s                           |
+| Lesen je Foto unter Hermes, Mac (`make hermes`)  | 4,5 s                                 |
+| Lesen je Foto auf dem Galaxy S22                 | 8,0 s (dazu 1,0 s Verkleinern, Dekodieren) |
 
 - `make test-archiv` schlägt fehl unter 87,0 % gelesen oder bei mehr als 4 unmarkiert falschen
   Werten in der Handerfassung (`ocr-prototyp/auswertung_ts.py`).
+- **Hermes ist ohne JIT etwa 10-mal langsamer als Node;** das S22 noch einmal 1,7-mal langsamer als
+  Hermes am Mac. `make hermes` misst eine Stichprobe von 20 Fotos unter derselben Hermes-Version
+  wie die App (aus dem Quellcode gebaut, `buildenv/hermes.Dockerfile`). Profil:
+  `hermes -sample-profiling=chrome -profiling-out=… alles.hbc`.
 - `make test`: Unit-Tests mit künstlichen Daten (`app/tests/`), ohne Fotos; dürfen ins Repo.
 - Beschleunigt: Kantenfilter einmal für alle drei Schwellen (0,8 → 0,45 s, Ergebnis unverändert).
   Verworfen: Display-Kandidaten auf halber Auflösung (0,33 s, aber 84,3 % statt 87,7 % gelesen).

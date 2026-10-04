@@ -2,13 +2,14 @@ COMPOSE := docker compose
 ANDROID := $(COMPOSE) run --rm android
 NODE    := $(COMPOSE) run --rm node
 OCR     := $(COMPOSE) run --rm ocr
+HERMES  := $(COMPOSE) run --rm hermes
 OUT     := daten/messlauf
 PARTS   := 12
 # Adresse des Macs im WLAN, für Handy-URLs; überschreibbar: make serve-apk LAN_IP=…
 LAN_IP  ?= $(shell ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
 export LAN_IP
 
-.PHONY: help images install icons apk serve-apk lan-ip typecheck test test-archiv klein
+.PHONY: help images install icons apk serve-apk lan-ip typecheck test test-archiv klein hermes
 
 help: ## Befehle anzeigen
 	@awk -F':.*## ' '/^[a-z-]+:.*## / { printf "  make %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -47,3 +48,6 @@ test-archiv: klein ## Erkennung am Fotoarchiv messen; schlägt fehl, wenn die Qu
 	  && for i in $$(seq 0 $$(($(PARTS) - 1))); do \
 	       npx --yes tsx tools/messlauf.ts /work/$(OUT)/klein $$i $(PARTS) /work/$(OUT)/ts/teil$$i.csv & done; wait'
 	$(OCR) python auswertung_ts.py --pruefen
+
+hermes: klein ## Erkennung unter Hermes wie auf dem Handy messen, Stichprobe aus 20 Fotos; Node zum Vergleich
+	$(HERMES) tools/hermes-lauf.sh /work/$(OUT)/klein /work/$(OUT)/hermes 20

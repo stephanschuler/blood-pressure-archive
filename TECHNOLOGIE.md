@@ -181,11 +181,25 @@ Nicht in der App: Sie kommt ohne selbst trainierte KI aus, das Modell bleibt Mes
 | **Modell, Schwelle 0,8**                    | 92,2 %  | 49 / 0 / 29                           |
 | Modell, Schwelle 0,9                        | 89,6 %  | 42 / 0 / 36                           |
 
+Stand nach toleranterer Tastensuche (s. u.); Trainingsdaten 920 Fotos, Test 500 Fotos. Zwischen
+zwei Trainingsläufen mit leicht geänderten Daten schwanken die Werte um etwa ±1 Prozentpunkt und
+um 1–2 falsche Werte; der schwere Testsatz ist mit 78 Fotos klein.
+
 - Schwelle = geringste Sicherheit über alle Ziffern eines Fotos, ab der ein Wert gilt.
 - Auf den 400 einfachen Testfotos liest das Modell bei 0,8 397 gleich wie das Segmentverfahren, 3
   weist es ab. Das zeigt Übereinstimmung, nicht Richtigkeit: Diese Werte stammen selbst vom
   Segmentverfahren.
 - Kombination beider Verfahren brachte nichts.
+
+### Andere Geräte und Tastensuche
+
+- Von 19 Fotos ohne gefundene Taste zeigten viele das **aktuelle Medisana bei schwachem oder
+  gelblichem Licht**; die Taste ist dann blassgrün. Die Tastensuche hat dafür eine tolerante Stufe
+  mit Formprüfung (aufrechtes Rechteck, Seitenverhältnis 1,2–2,4). Ohne Taste bleiben 12 Fotos.
+- **Wirklich andere Geräte:** Beurer (5 Fotos, 18.10. und 2.12.2025), älteres Medisana (2–3 Fotos,
+  Oktober 2025). Kein Foto eines anderen Geräts nach Dezember 2025.
+- Das Gerät bestimmt die Tastensuche, nicht die Handerfassung: Dort steht bei schwach beleuchteten
+  Medisana-Fotos oft die Vorbelegung „Beurer".
 
 ### Plausibilität und Bestätigung
 

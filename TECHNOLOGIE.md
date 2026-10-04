@@ -76,6 +76,20 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 
 ## Texterkennung
 
+### Befund am Fotoarchiv
+
+20 Stichproben aus `daten/Quelle/` (Juni 2025 bis April 2026):
+
+- **Ein Gerät:** Medisana mit festem Display-Layout. Drei Zeilen: SYS (3 Ziffern), DIA (2–3),
+  PUL (2–3). Darüber Datum und Uhrzeit, links eine Balkenanzeige.
+- **Die Uhr des Geräts ist nicht gestellt** (z. B. „1M06D 22:13" auf einem Foto vom 9.9.2025).
+  Messzeitpunkt deshalb ausschließlich aus EXIF bzw. „jetzt".
+- **Anker:** Die grüne START/STOP-Taste ist im Bild eindeutig und liegt immer rechts neben dem Display.
+- **Störungen:** wechselnder Abstand (Display füllt 20–70 % des Bildes), leichte Drehung und
+  Perspektive, Spiegelungen (Hand, Kabel), sichtbare inaktive Segmente („Geisterziffern", teils
+  farbig). Aktive Segmente sind durchweg deutlich dunkler als die inaktiven.
+- Die Fotos stammen von einem Samsung Galaxy S22; EXIF enthält `DateTimeOriginal`.
+
 ### Ansatz
 
 - **Generische OCR scheidet aus.** Apple Vision unterstützt Siebensegment-Ziffern laut Apple
@@ -88,6 +102,64 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 - **Fallback: eigenes kleines Modell** je Ziffernzelle (TFLite), trainiert auf den Zellen, die die
   Segment-Abtastung ausschneidet. In der App: `react-native-fast-tflite`. Spezialisierte Modelle
   erreichen in Studien an Blutdruckmessgeräten 98–99 %.
+
+### Messlauf
+
+- Prototyp in Python/OpenCV, läuft lokal in Docker. Fotos und Tabelle verlassen den Rechner nicht.
+- **Entwicklungssatz:** die 20 Stichproben mit von Hand abgelesenen Werten.
+- **Abgleich mit der Tabelle:** Die Tabelle enthält je Zeitslot ungefähr den Durchschnitt einer
+  Messung aus 2–4 Messpunkten. Fotos per EXIF-Zeit zu Messungen gruppieren; Treffer, wenn der
+  Tabellenwert zwischen kleinstem und größtem erkannten Wert der Gruppe liegt (mit Toleranz).
+- **Exakte Fehlerquote:** zusätzlich rund 200 Fotos von Hand erfassen, auf einer lokalen HTML-Seite.
+- **Kennzahlen:** exakter Treffer des ganzen Tripels, Genauigkeit je Feld, Ziffern-Verwechslungen
+  (1/7, 0/8/6/9), Rückweisungsrate, vor allem die **stille Fehlerrate**: falsche, aber plausible
+  Werte.
+
+### Ergebnis erster Messlauf (4.10.2026)
+
+Prototyp: Python/OpenCV in Docker, nicht im Repo.
+
+- **Dauerhafte Daten** in `daten/` (per `.gitignore` aus jedem Repo ausgeschlossen): Fotos und
+  Tabelle in `Quelle/`, Handerfassung und abgelesene Werte in `labels/`.
+- **Erzeugte Ergebnisse** in `daten/messlauf/` (`ergebnisse.csv`, `auffaellig.csv`); jeder
+  Messlauf überschreibt sie.
+
+| Kennzahl                                              | Wert              |
+|-------------------------------------------------------|-------------------|
+| Fotos                                                 | 1.510             |
+| vollständig und plausibel gelesen                     | 1.123 (74,4 %)    |
+| Taste nicht gefunden                                  | 19                |
+| gelesen, aber unplausibel                             | 7                 |
+| Messungen mit Tabelleneintrag und ≥ 1 gelesenem Foto  | 722               |
+| Tabellenwert im Bereich der gelesenen Werte ± 3       | SYS 97,2 %, DIA 96,3 %, PUL 96,0 %; alle drei 91,8 % |
+| Abweichung Mittel gelesen − Tabelle, Median           | 0 / 0 / 0         |
+| Verdacht auf stillen Fehler (> 20 weg von Tabelle und Rest der Messung) | 2 |
+
+- Wird ein Foto gelesen, stimmt es in aller Regel mit der Tabelle überein. Die Lücke sind die
+  **Abweisungen (rund 26 %)**, nicht falsche Werte.
+- Bekannte Ursachen aus den Stichproben: Hand- oder Kabelschatten auf dem Display, fehlerhafte
+  Entzerrung bei starker Perspektive.
+- Das Archiv hat meist 1–2 Fotos je Messung (403 Messungen mit einem, 467 mit zwei Fotos).
+- Die 20 Stichproben dienten zum Einstellen; auf ihnen liegt der Prototyp bei 16/20 richtig,
+  4 abgewiesen, 0 falsch.
+
+### Zweiter Messlauf
+
+Änderungen: Helligkeit aus dem hellsten Farbkanal (farbige Geistersegmente werden hell), Segment
+gegen seine direkte Umgebung statt gegen das ganze Bild, Schwelle je Ziffer statt je Bild.
+
+| Kennzahl                                        | Lauf 1  | Lauf 2  |
+|-------------------------------------------------|---------|---------|
+| vollständig und plausibel gelesen               | 74,4 %  | 80,5 %  |
+| Tabellenwert im Bereich ± 3, alle drei Felder   | 91,8 %  | 93,7 %  |
+| Verdacht auf stillen Fehler                     | 2       | 7       |
+| Fotos, die beide Läufe lesen, mit anderem Wert  | –       | 7 von 1.104 |
+
+- Abgewiesene Stichprobe (20 Fotos): 4 von **anderen Geräten** (Beurer mit Bluetooth, älteres
+  Medisana), 7 mit Hand- oder Handyschatten, 5 mit Kabel über den Ziffern, 2 mit farbigen
+  Geistersegmenten.
+- Die Fotos entstehen während der Messung ohne Rücksicht auf Bildqualität; ein Sucherrahmen in der
+  App senkt die Abweisungen daher kaum. Die Erkennung selbst muss robuster werden.
 
 ### Plausibilität und Bestätigung
 

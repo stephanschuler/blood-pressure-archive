@@ -1,7 +1,8 @@
 // CSV und XLSX für Google Sheets nach DATENSICHERUNG.md.
 import { strToU8, zipSync } from 'fflate';
 
-import type { Messpunkt } from './messung';
+import { mittel } from './auswertung';
+import { gruppieren, type Messpunkt, type Messung } from './messung';
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 
@@ -26,24 +27,55 @@ const seriell = (iso: string) => {
 const KOPF = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 const NS = 'http://schemas.openxmlformats.org';
 
-/** Wie csv(), aber als XLSX: die Zeit ist eine Zahl mit Datumsformat, Sheets muss nichts raten. */
-export function xlsx(punkte: Messpunkt[]): Uint8Array {
-  const zelle = (ref: string, inhalt: string) => `<c r="${ref}"${inhalt}</c>`;
-  const zeilen = [
-    `<row r="1">${['Zeit', 'SYS', 'DIA', 'Puls'].map((t, i) => zelle(`${'ABCD'[i]}1`, ` t="inlineStr"><is><t>${t}</t></is>`)).join('')}</row>`,
-    ...sortiert(punkte).map((p, i) => {
-      const r = i + 2;
-      return `<row r="${r}">${zelle(`A${r}`, ` s="1"><v>${seriell(p.zeit)}</v>`)}${[p.sys, p.dia, p.puls].map((v, j) => zelle(`${'BCD'[j]}${r}`, `><v>${v}</v>`)).join('')}</row>`;
-    }),
+type Zelle = string | number | [wert: number, stil: number] | undefined;
+
+const zelle = (ref: string, z: Zelle) =>
+  z === undefined ? ''
+    : typeof z === 'string' ? `<c r="${ref}" t="inlineStr"><is><t>${z}</t></is></c>`
+      : typeof z === 'number' ? `<c r="${ref}"><v>${z}</v></c>`
+        : `<c r="${ref}" s="${z[1]}"><v>${z[0]}</v></c>`;
+
+const blatt = (breiteA: number, zeilen: Zelle[][]) =>
+  `<worksheet xmlns="${NS}/spreadsheetml/2006/main"><cols><col min="1" max="1" width="${breiteA}" customWidth="1"/></cols><sheetData>${zeilen
+    .map((z, i) => `<row r="${i + 1}">${z.map((w, j) => zelle(`${'ABCDEFG'[j]}${i + 1}`, w)).join('')}</row>`)
+    .join('')}</sheetData></worksheet>`;
+
+const werte = (ms: Messung[]) => {
+  const w = mittel(ms);
+  return w ? [w.sys, w.dia, w.puls] : [undefined, undefined, undefined];
+};
+
+/** Je Tag eine Zeile mit den Mitteln der Messungen vor und ab 12 Uhr Ortszeit, wie auf der Startseite. */
+function tagesmittel(punkte: Messpunkt[]): Zelle[][] {
+  const tage = new Map<number, [Messung[], Messung[]]>();
+  for (const m of gruppieren(sortiert(punkte)).reverse()) {
+    const s = seriell(m.punkte[0].zeit);
+    const tag = Math.floor(s);
+    if (!tage.has(tag)) tage.set(tag, [[], []]);
+    tage.get(tag)![s - tag < 0.5 ? 0 : 1].push(m);
+  }
+  return [
+    ['Datum', 'SYS Vormittag', 'DIA Vormittag', 'Puls Vormittag', 'SYS Nachmittag', 'DIA Nachmittag', 'Puls Nachmittag'],
+    ...[...tage].map(([tag, [vm, nm]]): Zelle[] => [[tag, 2], ...werte(vm), ...werte(nm)]),
   ];
+}
+
+/** Blatt 1 wie csv(), die Zeit als Zahl mit Datumsformat, Sheets muss nichts raten; Blatt 2 Tagesmittel. */
+export function xlsx(punkte: Messpunkt[]): Uint8Array {
+  const messpunkte: Zelle[][] = [
+    ['Zeit', 'SYS', 'DIA', 'Puls'],
+    ...sortiert(punkte).map((p): Zelle[] => [[seriell(p.zeit), 1], p.sys, p.dia, p.puls]),
+  ];
+  const blattTyp = 'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"';
   const dateien: Record<string, string> = {
-    '[Content_Types].xml': `<Types xmlns="${NS}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    '[Content_Types].xml': `<Types xmlns="${NS}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ${blattTyp}/><Override PartName="/xl/worksheets/sheet2.xml" ${blattTyp}/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
     '_rels/.rels': `<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-    'xl/workbook.xml': `<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="Messpunkte" sheetId="1" r:id="rId1"/></sheets></workbook>`,
-    'xl/_rels/workbook.xml.rels': `<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    'xl/workbook.xml': `<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="Messpunkte" sheetId="1" r:id="rId1"/><sheet name="Tagesmittel" sheetId="2" r:id="rId3"/></sheets></workbook>`,
+    'xl/_rels/workbook.xml.rels': `<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>`,
     // Excel verlangt beide Füllungen, auch wenn keine Zelle sie nutzt
-    'xl/styles.xml': `<styleSheet xmlns="${NS}/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf/><xf numFmtId="164" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
-    'xl/worksheets/sheet1.xml': `<worksheet xmlns="${NS}/spreadsheetml/2006/main"><cols><col min="1" max="1" width="17" customWidth="1"/></cols><sheetData>${zeilen.join('')}</sheetData></worksheet>`,
+    'xl/styles.xml': `<styleSheet xmlns="${NS}/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/><numFmt numFmtId="165" formatCode="yyyy-mm-dd"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="3"><xf/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="165" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
+    'xl/worksheets/sheet1.xml': blatt(17, messpunkte),
+    'xl/worksheets/sheet2.xml': blatt(11, tagesmittel(punkte)),
   };
   return zipSync(Object.fromEntries(Object.entries(dateien).map(([name, xml]) => [name, strToU8(KOPF + xml)])));
 }

@@ -64,6 +64,10 @@
 - **XLSX:** dieselben Spalten. Die Zeit ist eine Tageszahl in Ortszeit mit Format
   `yyyy-mm-dd hh:mm`, damit Sheets sie als Datum führt: Aus der CSV las Sheets die Zeit nur als Text.
   Erzeugt mit `fflate`, ohne Tabellen-Bibliothek und ohne Expo-Importe, damit testbar.
+- **XLSX, Blatt „Tagesmittel“:** eine Zeile je Tag mit Messung, älteste zuerst. Spalten Datum
+  (`yyyy-mm-dd`), dann SYS, DIA, Puls vormittags, dann dieselben nachmittags. Je Hälfte das
+  gerundete Mittel ihrer Messungen, jede Messung zählt gleich; Grenze 12 Uhr Ortszeit. Beides wie
+  auf der Startseite. Hälfte ohne Messung: Zellen leer.
 - **Als XLSX speichern:** Ordnerwahl wie beim Sichern, Datei `blutdruck-JJJJ-MM-TT.xlsx`.
 - **In Google Drive ablegen:** Die XLSX geht in den Cache der App, und `expo-sharing` öffnet das
   Teilen-Blatt von Android. Dort „In Drive speichern“ wählen. Jede Ablage ist eine neue Datei. In

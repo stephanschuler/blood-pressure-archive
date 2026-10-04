@@ -1,19 +1,35 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Appearance, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { insertMesspunkt, listMessungen, migrate, type Messung } from './src/db';
+import { deleteMesspunkt, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
 import type { Reading } from './src/erkennung/messwerte';
 import { discard, importPhotos, recognize, takePhoto, type Foto } from './src/foto';
+import type { Messpunkt } from './src/messung';
+import { COLORS, THEME_LABEL, nextTheme, parseTheme, type Colors, type Theme } from './src/theme';
 
 migrate();
+
+Appearance.setColorScheme(parseTheme(getSetting('theme')));
 
 type Offen = { foto: Foto; reading: Reading | null };
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Main />
+    </SafeAreaProvider>
+  );
+}
+
+function Main() {
+  const c = COLORS[useColorScheme() === 'dark' ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
   const [queue, setQueue] = useState<Foto[]>([]);
   const [offen, setOffen] = useState<Offen | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
 
   // nächstes Foto der Warteschlange erkennen
   useEffect(() => {
@@ -35,15 +51,30 @@ export default function App() {
     setMessungen(listMessungen());
   };
 
+  const switchTheme = () => {
+    const t = nextTheme(theme);
+    setSetting('theme', t);
+    Appearance.setColorScheme(t);
+    setTheme(t);
+  };
+
+  const askDelete = (p: Messpunkt) =>
+    Alert.alert('Messpunkt löschen?', `${p.sys}/${p.dia}, Puls ${p.puls}\n${new Date(p.zeit).toLocaleString('de-DE')}`, [
+      { text: 'Abbrechen', style: 'cancel' },
+      { text: 'Löschen', style: 'destructive', onPress: () => { deleteMesspunkt(p.id); setMessungen(listMessungen()); } },
+    ]);
+
+  const screen = { flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8, paddingHorizontal: 16 };
+
   if (offen) {
     return (
-      <View style={styles.screen}>
+      <View style={screen}>
         {offen.reading ? (
-          <Bestaetigung key={offen.foto.uri} offen={offen} rest={queue.length - 1} onDone={next} />
+          <Bestaetigung key={offen.foto.uri} offen={offen} rest={queue.length - 1} onDone={next} c={c} />
         ) : (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" />
-            <Text style={styles.hint}>Erkenne …</Text>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={c.button} />
+            <Text style={{ color: c.sub, marginTop: 8 }}>Erkenne …</Text>
           </View>
         )}
         <StatusBar style="auto" />
@@ -52,34 +83,45 @@ export default function App() {
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Blutdruck</Text>
-      <View style={styles.row}>
-        <Button label="Foto aufnehmen" onPress={async () => setQueue(await takePhoto())} />
-        <Button label="Fotos importieren" onPress={async () => setQueue(await importPhotos())} />
+    <View style={screen}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
+        <Pressable onPress={switchTheme} style={{ padding: 8 }}>
+          <Text style={{ color: c.sub }}>Darstellung: {THEME_LABEL[theme]}</Text>
+        </Pressable>
       </View>
       <FlatList
+        style={{ flex: 1 }}
         data={messungen}
         keyExtractor={(m) => String(m.punkte[0].id)}
-        ListEmptyComponent={<Text style={styles.hint}>Noch keine Messungen.</Text>}
+        ListEmptyComponent={<Text style={{ color: c.sub }}>Noch keine Messungen.</Text>}
+        ListFooterComponent={messungen.length ? <Text style={{ color: c.sub, marginVertical: 12 }}>Messpunkt lange drücken, um ihn zu löschen.</Text> : null}
         renderItem={({ item: m }) => (
-          <View style={styles.item}>
-            <Text style={styles.zeit}>{new Date(m.punkte[0].zeit).toLocaleString('de-DE')}</Text>
-            <Text style={styles.werte}>
+          <View style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: c.line }}>
+            <Text style={{ color: c.sub }}>{new Date(m.punkte[0].zeit).toLocaleString('de-DE')}</Text>
+            <Text style={{ fontSize: 22, fontWeight: '600', color: c.text, marginVertical: 2 }}>
               {m.sys}/{m.dia} · Puls {m.puls}
             </Text>
-            <Text style={styles.hint}>
-              {m.punkte.map((p) => `${p.sys}/${p.dia}/${p.puls}`).join('  ')}
-            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {m.punkte.map((p) => (
+                <Pressable key={p.id} onLongPress={() => askDelete(p)} style={{ backgroundColor: c.chip, borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8 }}>
+                  <Text style={{ color: c.sub }}>{p.sys}/{p.dia}/{p.puls}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
       />
+      <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
+        <Button label="Foto aufnehmen" onPress={async () => setQueue(await takePhoto())} c={c} />
+        <Button label="Fotos importieren" onPress={async () => setQueue(await importPhotos())} c={c} />
+      </View>
       <StatusBar style="auto" />
     </View>
   );
 }
 
-function Bestaetigung({ offen, rest, onDone }: { offen: Offen; rest: number; onDone: () => void }) {
+function Bestaetigung({ offen, rest, onDone, c }: { offen: Offen; rest: number; onDone: () => void; c: Colors }) {
   const { foto, reading } = offen;
   const [werte, setWerte] = useState(reading!.values.map((v) => (v === null ? '' : String(v))));
   const zahlen = werte.map((w) => (/^\d{2,3}$/.test(w) ? Number(w) : null));
@@ -91,57 +133,44 @@ function Bestaetigung({ offen, rest, onDone }: { offen: Offen; rest: number; onD
   };
 
   return (
-    <View style={styles.flex}>
-      <Image source={{ uri: foto.uri }} style={styles.foto} resizeMode="contain" />
-      <Text style={styles.zeit}>
+    <View style={{ flex: 1 }}>
+      <Image source={{ uri: foto.uri }} style={{ width: '100%', height: 280, backgroundColor: c.photo }} resizeMode="contain" />
+      <Text style={{ color: c.sub, marginVertical: 6 }}>
         {foto.zeit.toLocaleString('de-DE')}
         {foto.zeitAusExif ? '' : ' (Zeitpunkt nicht im Foto, jetzt angenommen)'}
       </Text>
-      <View style={styles.row}>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
         {['SYS', 'DIA', 'PUL'].map((label, i) => (
-          <View key={label} style={styles.flex}>
-            <Text style={styles.hint}>{label}</Text>
+          <View key={label} style={{ flex: 1 }}>
+            <Text style={{ color: c.sub, marginBottom: 4 }}>{label}</Text>
             <TextInput
               value={werte[i]}
               onChangeText={(t) => setWerte((w) => w.map((x, j) => (j === i ? t : x)))}
               keyboardType="number-pad"
               maxLength={3}
-              style={[styles.input, (reading!.uncertain[i] || zahlen[i] === null) && styles.unsicher]}
+              style={{
+                fontSize: 32, borderWidth: 1, borderRadius: 8, padding: 8, textAlign: 'center', color: c.text,
+                backgroundColor: reading!.uncertain[i] || zahlen[i] === null ? c.uncertain : c.field,
+                borderColor: reading!.uncertain[i] || zahlen[i] === null ? '#d4a017' : c.fieldLine,
+              }}
             />
           </View>
         ))}
       </View>
-      <View style={styles.row}>
-        <Button label="Verwerfen" onPress={onDone} />
-        <Button label="Speichern" onPress={speichern} disabled={!gueltig} />
+      {rest > 0 && <Text style={{ color: c.sub, marginTop: 8 }}>Noch {rest} weitere Fotos</Text>}
+      <View style={{ flex: 1 }} />
+      <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
+        <Button label="Verwerfen" onPress={onDone} c={c} />
+        <Button label="Speichern" onPress={speichern} disabled={!gueltig} c={c} />
       </View>
-      {rest > 0 && <Text style={styles.hint}>Noch {rest} weitere Fotos</Text>}
     </View>
   );
 }
 
-function Button({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+function Button({ label, onPress, disabled, c }: { label: string; onPress: () => void; disabled?: boolean; c: Colors }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[styles.button, disabled && styles.disabled]}>
-      <Text style={styles.buttonText}>{label}</Text>
+    <Pressable onPress={onPress} disabled={disabled} style={{ flex: 1, backgroundColor: c.button, borderRadius: 8, padding: 14, alignItems: 'center', opacity: disabled ? 0.4 : 1 }}>
+      <Text style={{ color: '#fff', fontSize: 16 }}>{label}</Text>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff', paddingTop: 48, paddingHorizontal: 16 },
-  flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 28, fontWeight: '600', marginBottom: 12 },
-  row: { flexDirection: 'row', gap: 8, marginVertical: 8 },
-  button: { flex: 1, backgroundColor: '#1f6feb', borderRadius: 8, padding: 14, alignItems: 'center' },
-  disabled: { opacity: 0.4 },
-  buttonText: { color: '#fff', fontSize: 16 },
-  item: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc' },
-  zeit: { color: '#555', marginVertical: 4 },
-  werte: { fontSize: 22, fontWeight: '600' },
-  hint: { color: '#777', marginTop: 4 },
-  foto: { width: '100%', height: 280, backgroundColor: '#eee' },
-  input: { fontSize: 32, borderWidth: 1, borderColor: '#999', borderRadius: 8, padding: 8, textAlign: 'center' },
-  unsicher: { backgroundColor: '#fff3b0', borderColor: '#d4a017' },
-});

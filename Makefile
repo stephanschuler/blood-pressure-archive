@@ -32,8 +32,9 @@ lan-ip:
 typecheck: ## TypeScript prüfen
 	$(NODE) npx tsc --noEmit
 
-test: typecheck ## Unit-Tests (künstliche Daten, ohne Fotos)
+test: typecheck ## Unit- und Oberflächentests (künstliche Daten, ohne Fotos)
 	$(NODE) sh -c 'npx --yes tsx --test tests/*.test.ts'
+	$(NODE) npx jest
 
 klein: ## Fotos aus daten/ verkleinert ablegen, Eingabe für test-archiv
 	$(OCR) python export_klein.py

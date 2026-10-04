@@ -12,3 +12,6 @@ png android-icon-monochrome   432  432 android-icon-monochrome.png
 png loader-herz               384  384 loader-herz.png
 png loader-puls               576  384 loader-puls.png
 png loader-viewfinder         384  384 loader-viewfinder.png
+# Knöpfe der Startseite: 3-fach für 32 dp
+png add-a-photo                96   96 add-a-photo.png
+png add-photo-alternate        96   96 add-photo-alternate.png

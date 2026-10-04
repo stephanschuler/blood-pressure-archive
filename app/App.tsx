@@ -129,8 +129,8 @@ function Main() {
       />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
-        <Button label="Fotos importieren" onPress={async () => setQueue(await importPhotos())} c={c} />
-        <Button label="Foto aufnehmen" onPress={async () => setQueue(await takePhoto())} c={c} />
+        <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => setQueue(await importPhotos())} />
+        <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => setQueue(await takePhoto())} />
       </View>
       <StatusBar style="auto" />
     </View>
@@ -188,6 +188,16 @@ function Button({ label, onPress, disabled, c }: { label: string; onPress: () =>
     <Pressable onPress={onPress} disabled={disabled} style={{ flex: 1, backgroundColor: c.button, borderRadius: 8, padding: 14, alignItems: 'center', opacity: disabled ? 0.4 : 1 }}>
       <Text style={{ color: '#fff', fontSize: 16 }}>{label}</Text>
     </Pressable>
+  );
+}
+
+function IconButton({ label, icon, onPress }: { label: string; icon: number; onPress: () => void }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', padding: 8 }}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E53946', alignItems: 'center', justifyContent: 'center', elevation: 4 }}>
+        <Image source={icon} style={{ width: 32, height: 32, tintColor: '#fff' }} />
+      </Pressable>
+    </View>
   );
 }
 

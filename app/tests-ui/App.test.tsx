@@ -35,8 +35,8 @@ beforeEach(() => {
 test('leerer Start: Hinweis und Knöpfe', async () => {
   await render(<App />);
   expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
-  expect(screen.getByText('Foto aufnehmen')).toBeOnTheScreen();
-  expect(screen.getByText('Fotos importieren')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Foto aufnehmen')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Fotos importieren')).toBeOnTheScreen();
   expect(screen.getByText('Darstellung: System')).toBeOnTheScreen();
 });
 
@@ -44,7 +44,7 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, true] } as Reading);
   await render(<App />);
-  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   const puls = await screen.findByDisplayValue('64');
   expect(puls).toHaveStyle({ backgroundColor: '#fff3b0' });
   expect(screen.getByDisplayValue('128')).not.toHaveStyle({ backgroundColor: '#fff3b0' });
@@ -57,7 +57,7 @@ test('Speichern erst, wenn alle Felder gefüllt sind', async () => {
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockResolvedValue({ values: [128, null, 64], uncertain: [false, false, false] } as Reading);
   await render(<App />);
-  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   await screen.findByDisplayValue('128');
   await fireEvent.press(screen.getByText('Speichern'));
   expect(db.listMessungen()).toEqual([]);
@@ -108,7 +108,7 @@ function backButton() {
 test('Importieren links, Aufnehmen rechts', async () => {
   await render(<App />);
   // Treffer kommen in Darstellungsreihenfolge
-  const labels = screen.getAllByText(/^Fotos? (importieren|aufnehmen)$/).map((n) => n.props.children);
+  const labels = screen.getAllByLabelText(/^Fotos? (importieren|aufnehmen)$/).map((n) => n.props.accessibilityLabel);
   expect(labels).toEqual(['Fotos importieren', 'Foto aufnehmen']);
 });
 
@@ -117,7 +117,7 @@ test('Zurück-Taste in der Bestätigung verwirft das Foto', async () => {
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
   await render(<App />);
-  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   await screen.findByDisplayValue('128');
   await back();
   expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
@@ -131,7 +131,7 @@ test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet 
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockReturnValue(new Promise((r) => { finish = r; }));
   await render(<App />);
-  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   expect(await screen.findByText('Erkenne …')).toBeOnTheScreen();
   await back();
   await act(async () => finish({ values: [128, 85, 64], uncertain: [false, false, false] }));

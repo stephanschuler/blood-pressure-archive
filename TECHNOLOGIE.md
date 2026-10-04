@@ -229,6 +229,27 @@ des Medisana.
 - Freie Ziffernsuche scheitert vor allem an Geisterziffern (zusätzliche Stellen) und an
   unbekannten Segmentmustern.
 
+### Open-Source-OCR auf den Zahlenzeilen
+
+Eingabe: die drei Zahlenzeilen aus Stufe 1, entschrägt, schwarz auf weiß; für Tesseract verkleinert
+und mit geschlossenen Segmentlücken. Gemessen an der Handerfassung und an 300 zufälligen Fotos, die
+das alte Verfahren liest.
+
+| Leser                         | Handerfassung (330): richtig / falsch | einfach (300): richtig / falsch |
+|-------------------------------|---------------------------------------|---------------------------------|
+| Tesseract `eng`               | 2 / 0                                 | 3 / 1                           |
+| Tesseract `7seg` (tessdata_ssd) | 95 / 12                             | 187 / 0                         |
+| Tesseract `ssd`               | 99 / 15                               | 183 / 7                         |
+| Tesseract `ssd_int`           | 99 / 17                               | 183 / 6                         |
+| Tesseract `letsgodigital`     | 21 / 25                               | 48 / 34                         |
+| ssocr                         | 45 / 9                                | 125 / 1                         |
+| PaddleOCR (PP-OCRv5 mobile)   | 67 / 55                               | 93 / 59                         |
+| zum Vergleich: Stufe 1 + Raster | 159 / 12                            | –                               |
+
+- Alle Bibliotheken liegen klar hinter dem eigenen Segmentverfahren; auf einfachen Fotos liest die
+  beste (`7seg`) nur 62 %.
+- PaddleOCR liest am häufigsten still falsch; für Siebensegment-Ziffern ungeeignet.
+
 ### Plausibilität und Bestätigung
 
 - Weiche Grenzen: systolisch 70–250, diastolisch 40–150, Puls 40–180, systolisch > diastolisch.

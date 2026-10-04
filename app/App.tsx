@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Appearance, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Appearance, BackHandler, FlatList, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMesspunkt, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, type Messung } from './src/db';
@@ -30,26 +30,41 @@ function Main() {
   const [queue, setQueue] = useState<Foto[]>([]);
   const [offen, setOffen] = useState<Offen | null>(null);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
+  // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
+  const active = useRef<Foto | null>(null);
 
   // nächstes Foto der Warteschlange erkennen
   useEffect(() => {
     if (offen || !queue.length) return;
     const foto = queue[0];
+    active.current = foto;
     setOffen({ foto, reading: null });
+    const show = (reading: Reading) => active.current === foto && setOffen({ foto, reading });
     // Erkennung blockiert den JS-Thread: erst die Anzeige „Erkenne …" zeichnen lassen
     setTimeout(() => {
       recognize(foto)
-        .then((reading) => setOffen({ foto, reading }))
-        .catch(() => setOffen({ foto, reading: { values: [null, null, null], uncertain: [false, false, false] } }));
+        .then(show)
+        .catch(() => show({ values: [null, null, null], uncertain: [false, false, false] }));
     }, 50);
   }, [queue, offen]);
 
   const next = () => {
     if (offen) discard(offen.foto);
+    active.current = null;
     setOffen(null);
     setQueue((q) => q.slice(1));
     setMessungen(listMessungen());
   };
+
+  // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
+  useEffect(() => {
+    if (!offen) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      next();
+      return true;
+    });
+    return () => sub.remove();
+  }, [offen]);
 
   const switchTheme = () => {
     const t = nextTheme(theme);
@@ -113,8 +128,9 @@ function Main() {
         )}
       />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
-        <Button label="Foto aufnehmen" onPress={async () => setQueue(await takePhoto())} c={c} />
+        {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <Button label="Fotos importieren" onPress={async () => setQueue(await importPhotos())} c={c} />
+        <Button label="Foto aufnehmen" onPress={async () => setQueue(await takePhoto())} c={c} />
       </View>
       <StatusBar style="auto" />
     </View>

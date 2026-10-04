@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 // Oberfläche mit echter SQLite-Datenbank (node:sqlite); Kamera, Bildauswahl und Erkennung sind Attrappen.
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert, Appearance } from 'react-native';
+import { Alert, Appearance, BackHandler } from 'react-native';
 
 import type { Reading } from '../src/erkennung/messwerte';
 import type { Foto } from '../src/foto';
@@ -91,4 +91,50 @@ test('Darstellung wechselt reihum und wird gespeichert', async () => {
   await fireEvent.press(screen.getByText('Darstellung: Dunkel'));
   expect(screen.getByText('Darstellung: System')).toBeOnTheScreen();
   expect(db.getSetting('theme')).toBe('unspecified');
+});
+
+/** Zurück-Taste nachbilden: angemeldete Handler abfangen, den zuletzt angemeldeten auslösen. */
+type BackHandlerFn = Parameters<typeof BackHandler.addEventListener>[1];
+
+function backButton() {
+  const handlers: BackHandlerFn[] = [];
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, h) => {
+    handlers.push(h);
+    return { remove: () => handlers.splice(handlers.indexOf(h), 1) };
+  });
+  return () => act(async () => { handlers[handlers.length - 1]?.({} as Parameters<BackHandlerFn>[0]); });
+}
+
+test('Importieren links, Aufnehmen rechts', async () => {
+  await render(<App />);
+  // Treffer kommen in Darstellungsreihenfolge
+  const labels = screen.getAllByText(/^Fotos? (importieren|aufnehmen)$/).map((n) => n.props.children);
+  expect(labels).toEqual(['Fotos importieren', 'Foto aufnehmen']);
+});
+
+test('Zurück-Taste in der Bestätigung verwirft das Foto', async () => {
+  const back = backButton();
+  foto.takePhoto.mockResolvedValue([FOTO]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  await screen.findByDisplayValue('128');
+  await back();
+  expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
+  expect(foto.discard).toHaveBeenCalledWith(FOTO);
+  expect(db.listMessungen()).toEqual([]);
+});
+
+test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet nichts', async () => {
+  const back = backButton();
+  let finish!: (r: Reading) => void;
+  foto.takePhoto.mockResolvedValue([FOTO]);
+  foto.recognize.mockReturnValue(new Promise((r) => { finish = r; }));
+  await render(<App />);
+  await fireEvent.press(screen.getByText('Foto aufnehmen'));
+  expect(await screen.findByText('Erkenne …')).toBeOnTheScreen();
+  await back();
+  await act(async () => finish({ values: [128, 85, 64], uncertain: [false, false, false] }));
+  expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
+  expect(screen.queryByDisplayValue('128')).toBeNull();
 });

@@ -11,6 +11,9 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "de.g4n.bloodpressurearchive"
-    }
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
   }
 }

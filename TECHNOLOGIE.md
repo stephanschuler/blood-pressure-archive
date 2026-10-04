@@ -10,7 +10,7 @@ Stand: Oktober 2026. Anforderungen: [ANFORDERUNGEN.md](ANFORDERUNGEN.md).
 | Plattform          | zuerst nur Android; iOS später                                        |
 | Build              | lokal in Docker (`linux/amd64`-Container), kein Cloud-Build-Dienst    |
 | Test               | APK von Hand aufs Handy; nativer Android-Emulator auf dem Mac         |
-| Kamera / Import    | `expo-image-picker` (`exif: true`), Fallback `expo-media-library`     |
+| Kamera / Import    | `expo-image-picker` (`exif: true`); ohne EXIF-Zeit gilt „jetzt"       |
 | Datenbank          | `expo-sqlite` mit Drizzle (Migrationen)                               |
 | Export             | CSV von Hand, XLSX mit SheetJS (CDN-Tarball) oder ExcelJS, SQLite per `VACUUM INTO` |
 | Teilen / Drive     | System-Share-Sheet (`expo-sharing`); direkte Drive-API erst bei Bedarf |
@@ -311,8 +311,8 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 - Plausibilität der Erkennung (`segments.ts:plausible`): SYS 70–250, DIA 40–150, Puls 40–180,
   SYS − DIA ≥ 15. Ein Tripel außerhalb verwirft die Erkennung ganz; von Hand ist jeder zwei- bis
   dreistellige Wert möglich.
-- **Bestätigungsmaske ist Pflicht:** Display-Ausschnitt neben drei editierbaren Feldern,
-  unplausible Felder hervorgehoben, Speichern erst nach Bestätigung.
+- **Bestätigungsmaske ist Pflicht:** das Foto über drei editierbaren Feldern; unsichere, leere und
+  ungültige Felder hervorgehoben, Speichern erst nach Bestätigung.
 
 ## Daten
 
@@ -324,7 +324,8 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
   `allowsMultipleSelection`. `allowsEditing` (Zuschneiden) verwirft EXIF.
 - Der Android Photo Picker schwärzt nur den Standort, der Zeitstempel bleibt erhalten. Bilder aus
   Google Photos verlieren einen großen Teil der Metadaten.
-- **Fallback:** Aufnahmedatum aus der Mediathek: `assetId` → `expo-media-library` → `creationTime`.
+- **Ohne EXIF-Zeit:** `DateTimeOriginal`, sonst `DateTime`; fehlt beides, gilt „jetzt", und die
+  Bestätigung weist darauf hin.
 
 ### Datenbank
 

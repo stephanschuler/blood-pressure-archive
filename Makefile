@@ -4,8 +4,11 @@ NODE    := $(COMPOSE) run --rm node
 OCR     := $(COMPOSE) run --rm ocr
 OUT     := daten/messlauf
 PARTS   := 12
+# Adresse des Macs im WLAN, für Handy-URLs; überschreibbar: make serve-apk LAN_IP=…
+LAN_IP  ?= $(shell ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
+export LAN_IP
 
-.PHONY: help images install apk serve-apk typecheck test test-archiv klein
+.PHONY: help images install apk serve-apk lan-ip typecheck test test-archiv klein
 
 help: ## Befehle anzeigen
 	@awk -F':.*## ' '/^[a-z-]+:.*## / { printf "  make %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -19,8 +22,12 @@ install: ## npm-Abhängigkeiten der App installieren
 apk: ## Release-APK bauen: app/dist/blutdruck.apk
 	$(ANDROID) /work/buildenv/build-apk.sh
 
-serve-apk: ## APK im WLAN anbieten: http://<IP des Macs>:8000/blutdruck.apk
-	$(COMPOSE) run --rm -p 8000:8000 -w /work/app/dist node npx --yes http-server -p 8000
+serve-apk: lan-ip ## APK im WLAN anbieten; zeigt die URL fürs Handy, Ende mit Ctrl+C
+	@echo "Auf dem Handy öffnen: http://$(LAN_IP):8000/blutdruck.apk"
+	@$(COMPOSE) run --rm -p 8000:8000 -w /work/app/dist node npx --yes http-server -p 8000 -s
+
+lan-ip:
+	@test -n "$(LAN_IP)" || { echo "WLAN-Adresse des Macs nicht gefunden; setze LAN_IP=…"; exit 1; }
 
 typecheck: ## TypeScript prüfen
 	$(NODE) npx tsc --noEmit

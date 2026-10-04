@@ -36,26 +36,20 @@ Ohne unsicheren Wert, Tastatur zu:
 └──────────────────────────────────────┘
 ```
 
-Mit unsicherem DIA: der Cursor steht in DIA, die Zifferntastatur ist offen, das Foto schrumpft.
+Mit unsicherem DIA: der Cursor steht in DIA, die Zifferntastatur ist offen, die Ansicht ist so weit
+gescrollt, dass DIA knapp über der Tastatur steht.
 
 ```
 ┌──────────────────────────────────────┐
-│ Foto 3 von 7         4.10.2026, 08:12 │
-│ ━━━━━━━━━━━━━━━──────────────────────│
-│ ┌──────────────────────────────────┐ │
-│ │        Foto des Messgeräts       │ │  Foto, kleiner
+│ │        Foto des Messgeräts       │ │  Foto, oben hinausgescrollt
 │ └──────────────────────────────────┘ │
 │ ╭──────────────────────────────────╮ │
 │ │ SYS                         128  │ │
 │ │──────────────────────────────────│ │
 │ │ DIA                    ▐░░░ 84|░▌│ │  gelb, blauer Fokusrand
-│ │──────────────────────────────────│ │
-│ │ PUL                          67  │ │
-│ ╰──────────────────────────────────╯ │
-│       (Verwerfen)    (Speichern)      │
 ├──────────────────────────────────────┤
-│    1        2        3               │
-│    4        5        6               │  Zifferntastatur des Systems
+│    1        2        3               │  Zifferntastatur des Systems,
+│    4        5        6               │  über PUL und den Knöpfen
 │    7        8        9               │
 │  Weiter     0        ⌫               │
 └──────────────────────────────────────┘
@@ -87,8 +81,8 @@ Der Ladebildschirm „Erkenne …“ zeigt weder Kopfzeile noch Balken.
 ### 3. Foto
 
 Volle Breite, `resizeMode="contain"`. Das Foto
-nimmt den Platz, den Kopf, Rahmen und Knöpfe übrig lassen. Öffnet sich die Tastatur, schrumpft
-es; schließt sie sich, wächst es wieder.
+nimmt den Platz, den Kopf, Rahmen und Knöpfe übrig lassen. Bei offener Tastatur behält es
+seine Größe; die Ansicht wird scrollbar.
 
 ### 4. Display-Rahmen
 
@@ -121,14 +115,13 @@ Die Zifferntastatur des Systems (`keyboardType="number-pad"`), keine eigene.
   darunter keins, **speichert** „Weiter“, sofern alle drei Felder gültig sind, und das nächste
   Foto erscheint. Ist noch ein Feld darüber ungültig, springt „Weiter“ stattdessen dorthin.
 
-Damit das Foto schrumpft statt verdeckt zu werden, muss die Ansicht mit der Tastatur kleiner werden.
-Ob Android das von selbst tut (`softwareKeyboardLayoutMode`, in `app/app.json` nicht gesetzt) oder
-ein `KeyboardAvoidingView` nötig ist, zeigt erst das Handy.
+Android legt die Tastatur über die App, statt sie zu verkleinern. Die Ansicht hängt deshalb Platz
+in Tastaturhöhe an und scrollt das fokussierte Feld 8 dp über die Tastatur.
 
 ### 6. Knöpfe
 
 Unverändert: Verwerfen links, Speichern rechts, Speichern gesperrt, solange ein Feld ungültig ist.
-Sie stehen direkt über der Tastatur, wenn sie offen ist.
+Bei offener Tastatur liegen sie unter ihr: erreichbar durch Scrollen, Speichern auch über „Weiter“.
 
 ## Farben
 

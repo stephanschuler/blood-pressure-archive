@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Appearance, BackHandler, Easing, Image, Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
@@ -193,6 +193,11 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
   const [werte, setWerte] = useState(reading!.values.map((v) => (v === null ? '' : String(v))));
   const [fokus, setFokus] = useState<number | null>(null);
   const felder = useRef<(TextInput | null)[]>([]);
+  const scroll = useRef<ScrollView>(null);
+  const inhalt = useRef<View>(null);
+  const [hoehe, setHoehe] = useState(0);
+  const [tastatur, setTastatur] = useState(0);
+  const tastaturOben = useRef<number | null>(null);
   const zahlen = werte.map((w) => (/^\d{2,3}$/.test(w) ? Number(w) : null));
   const gueltig = zahlen.every((z) => z !== null);
   const markiert = zahlen.map((z, i) => reading!.uncertain[i] || z === null);
@@ -209,56 +214,88 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
     else felder.current[zahlen.indexOf(null)]?.focus();
   };
 
+  // Android legt die Tastatur über die App, statt sie zu verkleinern: Platz in Tastaturhöhe anhängen
+  useEffect(() => {
+    const auf = Keyboard.addListener('keyboardDidShow', (e) => {
+      tastaturOben.current = e.endCoordinates.screenY;
+      setTastatur(e.endCoordinates.height);
+    });
+    const zu = Keyboard.addListener('keyboardDidHide', () => {
+      tastaturOben.current = null;
+      setTastatur(0);
+    });
+    return () => { auf.remove(); zu.remove(); };
+  }, []);
+
+  // Unterkante des Felds 8 dp über die Tastatur
+  const ausrichten = (i: number) => {
+    const oben = tastaturOben.current;
+    if (oben === null) return;
+    scroll.current?.getNativeScrollRef()?.measureInWindow((_x, top) =>
+      felder.current[i]?.measureLayout(inhalt.current!, (_x, y, _w, h) =>
+        scroll.current?.scrollTo({ y: Math.max(0, y + h + 8 - (oben - top)) })));
+  };
+
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
-        <Text style={{ color: c.sub }}>
-          {foto.zeit.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-        </Text>
+    <ScrollView
+      ref={scroll}
+      style={{ flex: 1 }}
+      keyboardShouldPersistTaps="handled"
+      onLayout={(e) => setHoehe(e.nativeEvent.layout.height)}
+      // erst hier ist der angehängte Platz gelegt; ein früheres scrollTo würde auf die alte Höhe gekappt
+      onContentSizeChange={() => fokus !== null && ausrichten(fokus)}
+    >
+      <View ref={inhalt} style={{ height: hoehe }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
+          <Text style={{ color: c.sub }}>
+            {foto.zeit.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        {!foto.zeitAusExif && (
+          <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
+            Zeitpunkt nicht im Foto, jetzt angenommen
+          </Text>
+        )}
+        <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
+          <View testID="erkannt" style={{ position: 'absolute', width: `${(100 * (nr - 1 + bereit)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: c.erkannt }} />
+          <View testID="bestaetigt" style={{ position: 'absolute', width: `${(100 * (nr - 1)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
+        </View>
+        <Image source={{ uri: foto.uri }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" />
+        <View style={{ borderWidth: 2, borderColor: c.text, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 12 }}>
+          {['SYS', 'DIA', 'PUL'].map((label, i) => (
+            <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderColor: c.line }}>
+              <Text style={{ width: 40, color: c.sub }}>{label}</Text>
+              <TextInput
+                ref={(r) => { felder.current[i] = r; }}
+                accessibilityLabel={label}
+                value={werte[i]}
+                onChangeText={(t) => setWerte((w) => w.map((x, j) => (j === i ? t : x)))}
+                keyboardType="number-pad"
+                maxLength={3}
+                autoFocus={i === markiert.indexOf(true)}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => weiter(i)}
+                onFocus={() => { setFokus(i); ausrichten(i); }}
+                onBlur={() => setFokus(null)}
+                style={{
+                  flex: 1, fontSize: i < 2 ? 44 : 32, textAlign: 'right', paddingVertical: 2, paddingHorizontal: 8,
+                  borderWidth: 2, borderRadius: 8, color: c.text,
+                  backgroundColor: markiert[i] ? c.uncertain : 'transparent',
+                  borderColor: fokus === i ? c.focus : 'transparent',
+                }}
+              />
+            </View>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
+          <IconButton label="Verwerfen" icon={require('./assets/delete.png')} onPress={onDone} />
+          <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />
+        </View>
       </View>
-      {!foto.zeitAusExif && (
-        <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
-          Zeitpunkt nicht im Foto, jetzt angenommen
-        </Text>
-      )}
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
-        <View testID="erkannt" style={{ position: 'absolute', width: `${(100 * (nr - 1 + bereit)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: c.erkannt }} />
-        <View testID="bestaetigt" style={{ position: 'absolute', width: `${(100 * (nr - 1)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
-      </View>
-      <Image source={{ uri: foto.uri }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" />
-      <View style={{ borderWidth: 2, borderColor: c.text, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 12 }}>
-        {['SYS', 'DIA', 'PUL'].map((label, i) => (
-          <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderColor: c.line }}>
-            <Text style={{ width: 40, color: c.sub }}>{label}</Text>
-            <TextInput
-              ref={(r) => { felder.current[i] = r; }}
-              accessibilityLabel={label}
-              value={werte[i]}
-              onChangeText={(t) => setWerte((w) => w.map((x, j) => (j === i ? t : x)))}
-              keyboardType="number-pad"
-              maxLength={3}
-              autoFocus={i === markiert.indexOf(true)}
-              returnKeyType="next"
-              submitBehavior="submit"
-              onSubmitEditing={() => weiter(i)}
-              onFocus={() => setFokus(i)}
-              onBlur={() => setFokus(null)}
-              style={{
-                flex: 1, fontSize: i < 2 ? 44 : 32, textAlign: 'right', paddingVertical: 2, paddingHorizontal: 8,
-                borderWidth: 2, borderRadius: 8, color: c.text,
-                backgroundColor: markiert[i] ? c.uncertain : 'transparent',
-                borderColor: fokus === i ? c.focus : 'transparent',
-              }}
-            />
-          </View>
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
-        <IconButton label="Verwerfen" icon={require('./assets/delete.png')} onPress={onDone} />
-        <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />
-      </View>
-    </View>
+      <View style={{ height: tastatur }} />
+    </ScrollView>
   );
 }
 

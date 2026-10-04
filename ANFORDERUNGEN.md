@@ -63,11 +63,11 @@ Messung. Jeder Messpunkt besteht aus:
 - Lokale Datenbank in der App.
 - **Datensicherung:** die SQLite-Datei sichern und wieder einspielen
   ([DATENSICHERUNG.md](DATENSICHERUNG.md)).
-- **Tabelle:** CSV in einen Ordner; über das Teilen-Blatt nach Google Drive.
+- **Tabelle:** CSV und Excel (XLSX) in einen Ordner; die XLSX über das Teilen-Blatt nach Google
+  Drive.
 
 ### Später
 
-- **Export** als Excel-Datei.
 - **Evtl. automatischer Cloud-Sync;** heute geht die Tabelle von Hand über das Teilen-Blatt.
 
 ## Offene Punkte

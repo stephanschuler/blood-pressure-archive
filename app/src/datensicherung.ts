@@ -26,7 +26,7 @@ export async function dateiOeffnen(): Promise<Uint8Array | null> {
 }
 
 /** Teilen-Blatt von Android, etwa „In Drive speichern“. */
-export async function teilen(name: string, mime: string, inhalt: string) {
+export async function teilen(name: string, mime: string, inhalt: string | Uint8Array) {
   const datei = new File(Paths.cache, name);
   datei.create({ overwrite: true });
   datei.write(inhalt);

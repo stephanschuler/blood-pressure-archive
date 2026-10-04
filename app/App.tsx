@@ -10,7 +10,7 @@ import { discard, importPhotos, messzeit, recognize, takePhoto, type Foto } from
 import type { Messpunkt } from './src/messung';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
-import { csv } from './src/tabelle';
+import { csv, xlsx } from './src/tabelle';
 import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 
 migrate();
@@ -104,7 +104,8 @@ function Main() {
 
   // jeder Fehler sichtbar: sonst verlässt sich der Nutzer auf eine Sicherung, die es nicht gibt
   const versuchen = (titel: string, aktion: () => Promise<unknown>) => () => aktion().catch((e) => Alert.alert(titel, String(e)));
-  const tabelle = () => csv(messungen.flatMap((m) => m.punkte));
+  const punkte = () => messungen.flatMap((m) => m.punkte);
+  const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const eintraege: Eintrag[] = [
     {
       abschnitt: 'Datensicherung', label: 'Speichern', icon: require('./assets/download.png'),
@@ -131,12 +132,18 @@ function Main() {
     {
       abschnitt: 'Tabelle', label: 'Als CSV speichern', icon: require('./assets/csv.png'),
       onPress: versuchen('Nicht gespeichert', async () => {
-        if (await inOrdnerSpeichern(dateiname('csv'), 'text/csv', tabelle())) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
+        if (await inOrdnerSpeichern(dateiname('csv'), 'text/csv', csv(punkte()))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
+      }),
+    },
+    {
+      abschnitt: 'Tabelle', label: 'Als XLSX speichern', icon: require('./assets/table-view.png'),
+      onPress: versuchen('Nicht gespeichert', async () => {
+        if (await inOrdnerSpeichern(dateiname('xlsx'), XLSX, xlsx(punkte()))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
       }),
     },
     {
       abschnitt: 'Tabelle', label: 'In Google Drive ablegen', icon: require('./assets/add-to-drive.png'),
-      onPress: versuchen('Nicht geteilt', () => teilen(dateiname('csv'), 'text/csv', tabelle())),
+      onPress: versuchen('Nicht geteilt', () => teilen(dateiname('xlsx'), XLSX, xlsx(punkte()))),
     },
   ];
 

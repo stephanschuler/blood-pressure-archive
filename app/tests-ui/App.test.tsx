@@ -48,7 +48,7 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   const puls = await screen.findByDisplayValue('64');
   expect(puls).toHaveStyle({ backgroundColor: '#fff3b0' });
   expect(screen.getByDisplayValue('128')).not.toHaveStyle({ backgroundColor: '#fff3b0' });
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(await screen.findByText('128/85 · Puls 64')).toBeOnTheScreen();
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
 });
@@ -59,10 +59,10 @@ test('Speichern erst, wenn alle Felder gefüllt sind', async () => {
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   await screen.findByDisplayValue('128');
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen()).toEqual([]);
   await fireEvent.changeText(screen.getByDisplayValue(''), '85');
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen().map((m) => [m.sys, m.dia, m.puls])).toEqual([[128, 85, 64]]);
 });
 
@@ -135,9 +135,9 @@ test('mehrere Fotos: alle werden erkannt, ohne auf die Entscheidung zu warten', 
   await screen.findByDisplayValue('128');
   await act(() => new Promise((r) => setTimeout(r, 200)));
   expect(foto.recognize.mock.calls.map(([f]) => f)).toEqual(fotos);
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(screen.getByDisplayValue('131')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(screen.getByDisplayValue('135')).toBeOnTheScreen();
   expect(foto.recognize).toHaveBeenCalledTimes(3);
 });
@@ -166,7 +166,7 @@ test('Import eines schon gespeicherten Messpunkts: ohne Bestätigung übersprung
   await screen.findByDisplayValue('128');
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
   expect(screen.queryByText(/weitere Fotos/)).toBeNull();
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen().map((m) => m.punkte.length)).toEqual([1, 1]);
 });
 
@@ -177,6 +177,6 @@ test('gleiche Zeit, andere erkannte Werte: Bestätigung wie gewohnt', async () =
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Fotos importieren'));
   await fireEvent.changeText(await screen.findByDisplayValue('123'), '128');
-  await fireEvent.press(screen.getByText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen()[0].punkte).toHaveLength(1);
 });

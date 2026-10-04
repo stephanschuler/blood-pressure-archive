@@ -45,6 +45,6 @@ Raster 512 × 512, Ursprung oben links.
 Quellen in `svg/`. `make icons` erzeugt daraus die PNGs in diesem Ordner; welche Datei in
 welcher Größe, steht in `buildenv/icons.sh`.
 
-Knopf-Symbole der Startseite (`add-a-photo`, `add-photo-alternate`): Material Symbols Outlined,
-gefüllt, von Google, Apache 2.0, unverändert. Die App zeigt sie weiß auf einem Kreis im
-Herz-Rot `#E53946`.
+Knopf-Symbole der Startseite (`add-a-photo`, `add-photo-alternate`) und der Prüfansicht (`check`,
+`delete`): Material Symbols Outlined, gefüllt, von Google, Apache 2.0, unverändert. Die App zeigt
+sie weiß auf einem Kreis im Herz-Rot `#E53946`.

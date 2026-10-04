@@ -196,25 +196,17 @@ function Bestaetigung({ offen, rest, onDone, c }: { offen: Offen; rest: number; 
       {rest > 0 && <Text style={{ color: c.sub, marginTop: 8 }}>Noch {rest} weitere Fotos</Text>}
       <View style={{ flex: 1 }} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
-        <Button label="Verwerfen" onPress={onDone} c={c} />
-        <Button label="Speichern" onPress={speichern} disabled={!gueltig} c={c} />
+        <IconButton label="Verwerfen" icon={require('./assets/delete.png')} onPress={onDone} />
+        <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />
       </View>
     </View>
   );
 }
 
-function Button({ label, onPress, disabled, c }: { label: string; onPress: () => void; disabled?: boolean; c: Colors }) {
-  return (
-    <Pressable onPress={onPress} disabled={disabled} style={{ flex: 1, backgroundColor: c.button, borderRadius: 8, padding: 14, alignItems: 'center', opacity: disabled ? 0.4 : 1 }}>
-      <Text style={{ color: '#fff', fontSize: 16 }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function IconButton({ label, icon, onPress }: { label: string; icon: number; onPress: () => void }) {
+function IconButton({ label, icon, onPress, disabled }: { label: string; icon: number; onPress: () => void; disabled?: boolean }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', padding: 8 }}>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E53946', alignItems: 'center', justifyContent: 'center', elevation: 4 }}>
+      <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E53946', alignItems: 'center', justifyContent: 'center', elevation: 4, opacity: disabled ? 0.4 : 1 }}>
         <Image source={icon} style={{ width: 32, height: 32, tintColor: '#fff' }} />
       </Pressable>
     </View>

@@ -13,7 +13,7 @@ export function parseTheme(value: string | null): Theme {
 }
 
 export const COLORS = {
-  light: { bg: '#fff', text: '#111', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0', button: '#1f6feb' },
-  dark: { bg: '#121212', text: '#eee', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00', button: '#2f81f7' },
+  light: { bg: '#fff', text: '#111', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0' },
+  dark: { bg: '#121212', text: '#eee', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00' },
 };
 export type Colors = typeof COLORS.light;

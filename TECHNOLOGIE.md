@@ -93,6 +93,8 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
 
 ## Texterkennung
 
+Entstehung und heutige Funktionsweise im Zusammenhang: [ERKENNUNG.md](ERKENNUNG.md).
+
 ### Befund am Fotoarchiv
 
 20 Stichproben aus `daten/Quelle/` (Juni 2025 bis April 2026):

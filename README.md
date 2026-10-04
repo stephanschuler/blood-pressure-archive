@@ -51,4 +51,5 @@ make serve-apk   # APK im WLAN anbieten, zum Installieren auf dem Handy
 
 - [ANFORDERUNGEN.md](ANFORDERUNGEN.md): was die App können soll
 - [TECHNOLOGIE.md](TECHNOLOGIE.md): Technikwahl, Build, Messergebnisse der Erkennung, verworfene Wege
+- [ERKENNUNG.md](ERKENNUNG.md): wie die Erkennung entstand und wie sie heute funktioniert
 - [app/assets/ICON.md](app/assets/ICON.md): Gestaltung von App-Icon und Ladeanimation

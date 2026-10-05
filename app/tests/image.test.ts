@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { encode } from 'jpeg-js';
+
 import {
-  approxPoly, close, components, hsvRange, hull, minAreaRect, orderCorners, perspective, warpQuad,
+  approxPoly, close, components, decodeJpeg, hsvRange, hull, minAreaRect, orderCorners, perspective, warpQuad,
   type Mask, type Pt, type Rgb,
 } from '../src/erkennung/image';
 
@@ -11,6 +13,20 @@ const mask = (w: number, h: number, on: (x: number, y: number) => boolean): Mask
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data[y * w + x] = on(x, y) ? 1 : 0;
   return { w, h, data };
 };
+
+test('JPEG: Maße, Kanalreihenfolge RGB, Farben nach Kompression nah am Original', () => {
+  // Vier Farbflächen 32x16: Rot, Grün, Blau, Grau
+  const w = 64, h = 32, farben = [[220, 30, 30], [30, 200, 60], [40, 50, 210], [128, 128, 128]];
+  const rgba = new Uint8Array(w * h * 4);
+  const farbe = (x: number, y: number) => farben[(y < h / 2 ? 0 : 2) + (x < w / 2 ? 0 : 1)];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) rgba.set([...farbe(x, y), 255], (y * w + x) * 4);
+  const img = decodeJpeg(new Uint8Array(encode({ data: rgba, width: w, height: h }, 95).data));
+  assert.deepEqual([img.w, img.h, img.data.length], [w, h, w * h * 3]);
+  for (const [x, y] of [[8, 4], [56, 4], [8, 28], [56, 28]]) {
+    const ist = [...img.data.subarray((y * w + x) * 3, (y * w + x) * 3 + 3)];
+    assert.ok(ist.every((v, i) => Math.abs(v - farbe(x, y)[i]) < 8), `(${x},${y}) ${ist}`);
+  }
+});
 
 test('Hülle und kleinstes Rechteck eines gedrehten Rechtecks', () => {
   // Rechteck 40x20, um 30° gedreht

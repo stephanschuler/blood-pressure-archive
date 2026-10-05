@@ -8,7 +8,7 @@ export type Reading = {
   uncertain: [boolean, boolean, boolean]; // Feld ist mehrdeutig: in der Bestätigung hervorheben
 };
 
-const MARGIN = 0.2; // Mehrdeutigkeitsprüfung, gemessen in ocr-prototyp/dev_pul.py
+const MARGIN = 0.2; // Mehrdeutigkeitsprüfung, Messung in TECHNOLOGIE.md
 
 export function readValues(img: Rgb): Reading {
   const chains = [viaButton(img), viaEdges(img)].map((d) => (d ? measures(d) : null));

@@ -19,9 +19,10 @@
 
 ## Messgeräte
 
-Die App liest alle Geräte, die im Fotoarchiv vorkommen:
+Die App liest das Medisana mit grüner START/STOP-Taste (aktuell, Großteil der Fotos).
 
-- Medisana mit grüner START/STOP-Taste (aktuell, Großteil der Fotos)
+Zurückgestellt, bis die Geräte wieder genutzt werden (ERKENNUNG.md):
+
 - Beurer mit Bluetooth
 - älteres Medisana
 

@@ -575,7 +575,7 @@ liest eine leere Hunderterstelle als 1. Auf echten Fotos leistet das der hellste
 | älteres Medisana | 2–3 | nicht unterstützt, zurückgestellt |
 
 Weg 2 (Ränder) braucht keine Taste, liest aber mit dem festen Medisana-Raster; für andere Geräte
-fehlt ein Layout. `ANFORDERUNGEN.md` verlangt dagegen alle drei Geräte.
+fehlt ein Layout.
 
 ### Offen, nicht gemessen
 

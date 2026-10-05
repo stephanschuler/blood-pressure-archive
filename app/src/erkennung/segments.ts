@@ -1,4 +1,4 @@
-// Ziffern im entzerrten Display (330x400) Segment für Segment lesen. Vorbild: ocr-prototyp/segments.py.
+// Ziffern im entzerrten Display (330x400) Segment für Segment lesen.
 import type { Rgb } from './image';
 
 export type Cell = [number | null, number, number, number, number, number]; // xl, xr, yt, ym, yb, slant

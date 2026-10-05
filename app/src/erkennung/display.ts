@@ -1,4 +1,4 @@
-// Zwei Wege zum entzerrten Display (330x400). Vorbild: ocr-prototyp/display.py und stufe1.py.
+// Zwei Wege zum entzerrten Display (330x400).
 import {
   adaptiveDark, canny, channelMax, close, components, dilate3, gaussianBlur, grayscale, hsvRange, hull,
   invert, minAreaRect, orderCorners, perimeter, polygonArea, approxPoly, remap, warpQuad,

@@ -113,12 +113,12 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
       <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
         {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
       </View>
-      {/* reicht bis an den Bildschirmrand: App.tsx rückt um 16 ein */}
-      <View style={{ flex: 1, marginRight: -16 }}>
+      {/* reicht bis an beide Bildschirmränder: App.tsx rückt um 16 ein; die Wochenkarte ragt über */}
+      <View style={{ flex: 1, marginHorizontal: -16 }}>
         <SectionList
           ref={liste}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingRight: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
           sections={abschnitte}
           stickySectionHeadersEnabled
           extraData={[offen, markiert]}
@@ -146,15 +146,15 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
               </Svg>
             </Pressable>
           )}
-          renderItem={({ item }) =>
+          renderItem={({ item, index, section }) =>
             item.art === 'woche'
               ? <Wochenzeile w={item} c={c} />
-              : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
+              : <Tageszeile tag={item} vorWoche={section.data[index + 1]?.art === 'woche'} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
         {aeltester && <Henkel abschnitte={abschnitte} sichtbar={sichtbar} onZiel={springen} onZiehen={ziehenMelden} c={c} />}
         {hinweis && (
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 16, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
+          <View pointerEvents="none" style={{ position: 'absolute', left: 16, right: 16, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
             <Text style={{ color: '#fff', fontSize: 13 }}>{hinweis}</Text>
           </View>
         )}
@@ -350,10 +350,10 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
 }
 
 /** Ohne Bezug: Strich, wo ein Pfeil erwartet wird (Wochenzeile), sonst leer. */
-function Wertspalten({ w, bezug, c, groesse = 18, strich }: { w: Werte; bezug: Werte | null; c: Colors; groesse?: number; strich?: boolean }) {
+function Wertspalten({ w, bezug, c, groesse = 18, farbe = c.text, strich }: { w: Werte; bezug: Werte | null; c: Colors; groesse?: number; farbe?: string; strich?: boolean }) {
   return (['sys', 'dia', 'puls'] as const).map((k) => (
     <View key={k} style={{ flex: 1, alignItems: 'flex-end' }}>
-      <Text style={{ fontSize: groesse, lineHeight: wertzeile(groesse), fontWeight: '700', color: c.text }}>{w[k]}</Text>
+      <Text style={{ fontSize: groesse, lineHeight: wertzeile(groesse), fontWeight: '700', color: farbe }}>{w[k]}</Text>
       {bezug ? <Trend wert={w[k]} bezug={bezug[k]} c={c} /> : <Text style={{ fontSize: 11, color: c.sub }}>{strich ? '–' : ' '}</Text>}
     </View>
   ));
@@ -361,12 +361,19 @@ function Wertspalten({ w, bezug, c, groesse = 18, strich }: { w: Werte; bezug: W
 
 function Wochenzeile({ w, c }: { w: Woche; c: Colors }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, paddingBottom: 6, borderBottomWidth: 1, borderColor: c.line }}>
-      <View style={{ width: VOR_WERTEN }}>
-        <Text style={{ color: c.text }}><Text style={{ fontWeight: '700' }}>KW {w.kw}</Text><Text style={{ fontSize: 11, color: c.sub }}> Ø Woche</Text></Text>
-        <Text style={{ fontSize: 10, color: c.sub }}>{datum(w.von)}–{datum(w.bis)} · {w.anzahl} Mess.</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 8, marginHorizontal: -8, paddingTop: 10, paddingBottom: 8, paddingHorizontal: 8, borderRadius: 12, backgroundColor: c.chip }}>
+      <View style={{ width: VOR_WERTEN, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {/* bleibt auch im Dunkelmodus hell */}
+        <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff', alignSelf: 'flex-start', marginTop: 3 }}>
+          <Text style={{ backgroundColor: '#666', color: '#fff', fontSize: 9, textAlign: 'center' }}>KW</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#111', textAlign: 'center', paddingTop: 2, paddingBottom: 3 }}>{w.kw}</Text>
+        </View>
+        <View>
+          <Text style={{ fontSize: 11, color: c.text }}>{datum(w.von)}–{datum(w.bis)}</Text>
+          <Text style={{ fontSize: 10, color: c.sub }}>{w.anzahl === 1 ? '1 Messung' : `${w.anzahl} Messungen`}</Text>
+        </View>
       </View>
-      <Wertspalten w={w.mittel} bezug={w.vorwoche} c={c} groesse={16} strich />
+      <Wertspalten w={w.mittel} bezug={w.vorwoche} c={c} groesse={16} farbe={c.mid} strich />
     </View>
   );
 }
@@ -381,9 +388,9 @@ function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
   );
 }
 
-type TagProps = { tag: Tag; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void; c: Colors };
+type TagProps = { tag: Tag; vorWoche: boolean; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void; c: Colors };
 
-function Tageszeile({ tag, offen, markiert, onToggle, onEdit, onDelete, c }: TagProps) {
+function Tageszeile({ tag, vorWoche, offen, markiert, onToggle, onEdit, onDelete, c }: TagProps) {
   const leuchten = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!markiert) return;
@@ -392,7 +399,7 @@ function Tageszeile({ tag, offen, markiert, onToggle, onEdit, onDelete, c }: Tag
   }, [markiert, leuchten]);
   const hinterlegt = leuchten.interpolate({ inputRange: [0, 1], outputRange: ['rgba(229,57,70,0)', 'rgba(229,57,70,0.4)'] });
   return (
-    <Animated.View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: 1, borderColor: c.line, backgroundColor: hinterlegt }}>
+    <Animated.View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: vorWoche ? 0 : 1, borderColor: c.line, backgroundColor: hinterlegt }}>
       <Kalenderblatt d={tag.tag} c={c} />
       <View style={{ flex: 1 }}>
         {tag.messungen.map((m, i) => {

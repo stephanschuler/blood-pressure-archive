@@ -25,8 +25,10 @@
 │                    SYS   DIA   PUL    │  ┘
 ├──────────────────────────────────────┤
 │ Oktober 2026                          │  Monatskopf, haftet
-│ KW 40 Ø Woche       139    82    73   │  Wochenzeile
-│ 28.09.–04.10. · 11   ▼8    •0    ▲2   │
+│ ┌──┐ 28.09.–04.10.  139    82    73   │  Wochenzeile: graue Karte
+│ │KW│ 11 Messungen    ▼8    •0    ▲2   │  mit KW-Blatt
+│ │40│                                  │
+│ └──┘                                  │
 │ ┌──┐ ◔ 07:59 (2)  123    84    67     │  Tag mit Kalenderblatt,
 │ │So│               ▼16   ▲2    ▼6     │  darin die Messungen
 │ │ 4│                                  │
@@ -95,7 +97,9 @@ und zeigt unten knapp drei Sekunden: `Keine Messung am 14.05.2024, nächste davo
 
 Vor dem ersten Tag jeder Kalenderwoche, nicht aufklappbar:
 
-- links `KW 40` fett, daneben „Ø Woche“, darunter klein `28.09.–04.10. · 11 Mess.`
+- links ein KW-Blatt wie das Kalenderblatt der Tage: grauer Streifen „KW“, darunter die Nummer,
+  auch im Dunkelmodus hell. Daneben der Zeitraum `28.09.–04.10.`, darunter klein `11 Messungen`.
+  Die Zeile ist eine graue Karte, die Werte sind gedämpft.
 - in den drei Wertspalten das Mittel der Woche (gewählte Tageshälfte), darunter je ein Pfeil zur
   Vorwoche. Hat die Vorwoche keine Messung, steht statt des Pfeils ein Strich.
 

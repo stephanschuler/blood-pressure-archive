@@ -67,7 +67,9 @@ Eine Zeile auf grauem Grund:
 
 ### 3. Diagramm
 
-- **Zeitraum:** fest 21 Tage, heute und die 20 Kalendertage davor.
+- **Zeitraum:** 21 Tage; er folgt der Liste. Die Tage, die in der Liste sichtbar sind, stehen in
+  der Mitte, hellrot hinterlegt. Ganz oben endet er heute, ganz unten beginnt er am ältesten Tag.
+  Er folgt der Mitte der sichtbaren Tage, kurz animiert; über mehr als 21 Tage springt er.
 - **Linien:** SYS rot, DIA blau, je eine Linie für Vormittag (durchgezogen) und Nachmittag
   (gestrichelt). Bei gefilterter Ansicht nur die Linien der gewählten Hälfte.
 - **Hinterlegt:** die 7 Tage der Kennzahl grau, beschriftet „Ø 7 Tage“.

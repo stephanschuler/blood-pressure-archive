@@ -1,12 +1,12 @@
 // Übersicht der Messungen, Aufbau nach STARTSEITE.md.
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
-import { Fragment, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Animated, PanResponder, Platform, Pressable, SectionList, Text, View, type ViewToken } from 'react-native';
+import { Fragment, memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text, View, type ViewToken } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
-  AUSWAHL, filtern, gliedern, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt, zwischen,
+  AUSWAHL, filtern, gliedern, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
   type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
 import { getSetting, setSetting } from './db';
@@ -30,6 +30,7 @@ const VOR_WERTEN = BLATT + 10 + 12 + 6 + 16 + 6 + 42;
 const LEISTE = 40;
 
 type Sichtbar = (oben: Date) => void;
+type Bereich = (unten: Date, oben: Date) => void;
 
 export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c: Colors; onDelete: (p: Messpunkt) => void }) {
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
@@ -42,6 +43,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
   const ziel = useRef({ d: new Date(), versuche: 0 });
   const oben = useRef(new Date());
   const sichtbar = useRef<Sichtbar>(undefined);
+  const bereich = useRef<Bereich>(undefined);
   const zeitgeber = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => zeitgeber.current.forEach(clearTimeout), []);
   const spaeter = (f: () => void, ms: number) => zeitgeber.current.push(setTimeout(f, ms));
@@ -51,6 +53,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
     if (!tage.length) return;
     oben.current = tage[0];
     sichtbar.current?.(tage[0]);
+    bereich.current?.(tage[tage.length - 1], tage[0]);
   }).current;
   if (!messungen.length) return <Text style={{ flex: 1, color: c.sub }}>Noch keine Messungen.</Text>;
 
@@ -110,7 +113,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
         ))}
       </View>
       <Kennzahl auswahl={auswahl} mittel={sieben.mittel} vorwoche={sieben.vorwoche} c={c} />
-      <Diagramm ms={ms} heute={heute} c={c} />
+      <Diagramm ms={ms} von={aeltester} heute={heute} bereich={bereich} c={c} />
       <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingRight: LEISTE + 6 - 16, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
         {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
       </View>
@@ -204,38 +207,80 @@ const H = 44;
 const LO = 60;
 const HI = 170;
 
-function Diagramm({ ms, heute, c }: { ms: Messung[]; heute: Date; c: Colors }) {
+const TAG = 864e5;
+const TAGE = 21;
+const y = (v: number) => H - ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * H;
+
+// react-native-svg zeichnet auf Android in eine Bitmap der vollen Fläche: die ganze Zeit als ein Svg sprengt sie
+const Kachel = memo(function Kachel({ k, breite, children }: { k: number; breite: number; children: ReactNode }) {
+  return <Svg width={breite} height={H + 12} viewBox={`${k * breite} 0 ${breite} ${H + 12}`} style={{ position: 'absolute', left: k * breite }}>{children}</Svg>;
+});
+
+/** 21 Tage, die in der Liste sichtbaren in der Mitte; am Anfang und Ende der Zeit an den Rand gerückt. */
+function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; heute: Date; bereich: RefObject<Bereich | undefined>; c: Colors }) {
   const [breite, setBreite] = useState(0);
-  const von = tagesbeginn(heute, 20);
-  const bis = tagesbeginn(heute, -1);
-  const x = (d: Date) => ((d.getTime() - von.getTime()) / (bis.getTime() - von.getTime())) * breite;
-  const y = (v: number) => H - ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * H;
-  const verlauf = zwischen(ms, von, bis).reverse();
-  const montage: Date[] = [];
-  for (let d = von; d < bis; d = tagesbeginn(d, -1)) if (d.getDay() === 1) montage.push(d);
-  const x7 = x(tagesbeginn(heute, 6));
+  const [sichtbar, setSichtbar] = useState<[number, number] | null>(null);
+  const verschiebung = useRef(new Animated.Value(0)).current;
+  const zuletzt = useRef<number | null>(null);
+  useEffect(() => {
+    bereich.current = (unten, oben) => setSichtbar([unten.getTime(), tagesbeginn(oben, -1).getTime()]);
+    return () => { bereich.current = undefined; };
+  }, [bereich]);
+
+  const bis = tagesbeginn(heute, -1).getTime();
+  const anfang = Math.min(von?.getTime() ?? bis, bis - TAGE * TAG);
+  const x7 = tagesbeginn(heute, 6).getTime();
+  const x = (t: number) => ((t - anfang) / TAG) * (breite / TAGE);
+  const start = sichtbar ? Math.min(Math.max((sichtbar[0] + sichtbar[1] - TAGE * TAG) / 2, anfang), bis - TAGE * TAG) : bis - TAGE * TAG;
+  const ziel = -x(start);
+
+  useEffect(() => {
+    if (!breite) return;
+    // weiter als eine Breite, etwa nach dem Ziehen an der Kurvenleiste: springen, sonst liefen leere Kacheln durch
+    if (zuletzt.current === null || Math.abs(ziel - zuletzt.current) > breite) verschiebung.setValue(ziel);
+    else Animated.timing(verschiebung, { toValue: ziel, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    zuletzt.current = ziel;
+  }, [ziel, breite, verschiebung]);
+
+  const szene = useMemo(() => {
+    const x = (t: number) => ((t - anfang) / TAG) * (breite / TAGE);
+    const verlauf = [...ms].reverse();
+    const montage: Date[] = [];
+    for (let d = new Date(anfang); d.getTime() < bis; d = tagesbeginn(d, -1)) if (d.getDay() === 1) montage.push(d);
+    return (
+      <>
+        <Rect x={x(x7)} y={0} width={x(bis) - x(x7)} height={H} fill={c.chip} />
+        <SvgText x={x(x7) + 3} y={9} fontSize={8} fill={c.sub}>Ø 7 Tage</SvgText>
+        {[80, 140].map((v) => <Line key={v} x1={0} x2={x(bis)} y1={y(v)} y2={y(v)} stroke={c.line} strokeDasharray="3 3" />)}
+        {montage.map((d) => <SvgText key={d.getTime()} x={x(d.getTime())} y={H + 10} fontSize={8} fill={c.sub}>{datum(d)}</SvgText>)}
+        {(['vormittag', 'nachmittag'] as const).map((h) => {
+          const punkte = verlauf.filter((m) => tageshaelfte(m) === h);
+          const strich = h === 'nachmittag' ? '4 3' : undefined;
+          return (['sys', 'dia'] as const).map((k) => punkte.length === 1
+            ? <Circle key={h + k} cx={x(zeitpunkt(punkte[0]).getTime())} cy={y(punkte[0][k])} r={2} fill={c[k]} />
+            : <Polyline key={h + k} points={punkte.map((m) => `${x(zeitpunkt(m).getTime())},${y(m[k])}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.8} strokeDasharray={strich} />);
+        })}
+      </>
+    );
+  }, [ms, anfang, bis, x7, breite, c]);
+
+  // die Kacheln um den Ausschnitt, auch die, aus der die Animation kommt
+  const kacheln: number[] = [];
+  const k0 = breite ? Math.floor(-ziel / breite) : 0;
+  for (let k = Math.max(k0 - 1, 0); k <= k0 + 2 && k * breite < x(bis); k++) kacheln.push(k);
 
   return (
     <View onLayout={(e) => setBreite(e.nativeEvent.layout.width)} style={{ marginTop: 6 }}>
       {breite > 0 && (
-        <Svg width={breite} height={H + 12}>
-          <Rect x={x7} y={0} width={breite - x7} height={H} fill={c.chip} />
-          <SvgText x={x7 + 3} y={9} fontSize={8} fill={c.sub}>Ø 7 Tage</SvgText>
-          {[80, 140].map((v) => (
-            <Fragment key={v}>
-              <Line x1={0} x2={breite} y1={y(v)} y2={y(v)} stroke={c.line} strokeDasharray="3 3" />
-              <SvgText x={breite} y={y(v) - 2} fontSize={8} fill={c.sub} textAnchor="end">{v}</SvgText>
-            </Fragment>
-          ))}
-          {montage.map((d) => <SvgText key={d.getTime()} x={x(d)} y={H + 10} fontSize={8} fill={c.sub}>{datum(d)}</SvgText>)}
-          {(['vormittag', 'nachmittag'] as const).map((h) => {
-            const punkte = verlauf.filter((m) => tageshaelfte(m) === h);
-            const strich = h === 'nachmittag' ? '4 3' : undefined;
-            return (['sys', 'dia'] as const).map((k) => punkte.length === 1
-              ? <Circle key={h + k} cx={x(zeitpunkt(punkte[0]))} cy={y(punkte[0][k])} r={2} fill={c[k]} />
-              : <Polyline key={h + k} points={punkte.map((m) => `${x(zeitpunkt(m))},${y(m[k])}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.8} strokeDasharray={strich} />);
-          })}
-        </Svg>
+        <View style={{ height: H + 12, overflow: 'hidden' }}>
+          <Animated.View style={{ position: 'absolute', top: 0, left: 0, width: x(bis), height: H + 12, transform: [{ translateX: verschiebung }] }}>
+            {kacheln.map((k) => <Kachel key={k} k={k} breite={breite}>{szene}</Kachel>)}
+            {sichtbar && <View pointerEvents="none" style={{ position: 'absolute', top: 0, height: H, left: x(sichtbar[0]), width: x(sichtbar[1]) - x(sichtbar[0]), backgroundColor: 'rgba(229,57,70,0.16)' }} />}
+          </Animated.View>
+          <Svg width={24} height={H} pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0 }}>
+            {[80, 140].map((v) => <SvgText key={v} x={24} y={y(v) - 2} fontSize={8} fill={c.sub} textAnchor="end">{v}</SvgText>)}
+          </Svg>
+        </View>
       )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, paddingBottom: 4 }}>
         <Text style={{ fontSize: 11, color: c.sys }}>━ SYS</Text>

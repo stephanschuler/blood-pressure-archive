@@ -50,8 +50,8 @@ export function hasMesspunkt(db: Sql, p: Omit<Messpunkt, 'id'>): boolean {
 }
 
 /** Gleicht er danach einem anderen Messpunkt derselben Zeit, bleibt nur einer. */
-export function updateMesspunkt(db: Sql, id: number, w: Pick<Messpunkt, 'sys' | 'dia' | 'puls'>) {
-  db.runSync('UPDATE OR REPLACE messpunkt SET sys = ?, dia = ?, puls = ? WHERE id = ?', w.sys, w.dia, w.puls, id);
+export function updateMesspunkt(db: Sql, id: number, p: Omit<Messpunkt, 'id'>) {
+  db.runSync('UPDATE OR REPLACE messpunkt SET zeit = ?, sys = ?, dia = ?, puls = ? WHERE id = ?', p.zeit, p.sys, p.dia, p.puls, id);
 }
 
 export function deleteMesspunkt(db: Sql, id: number) {

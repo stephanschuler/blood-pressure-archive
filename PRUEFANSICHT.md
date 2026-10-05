@@ -58,10 +58,13 @@ gescrollt, dass DIA knapp über der Tastatur steht.
 
 ### 1. Kopfzeile
 
-Links fett `Foto 3 von 7`, rechts in Grau der Zeitpunkt des Fotos ohne Sekunden
-(`4.10.2026, 08:12`). Stammt der Zeitpunkt nicht aus dem Foto, steht dort der angenommene
-Zeitpunkt, und darunter folgt über die ganze Breite eine zweite Zeile, klein auf
-`uncertain`-Gelb: „Zeitpunkt nicht im Foto, jetzt angenommen“.
+Links fett `Foto 3 von 7`, rechts der Zeitpunkt des Fotos ohne Sekunden (`4.10.2026, 08:12`),
+unterstrichen in `focus`-Blau: **Antippen** öffnet den Datums-, dann den Uhrzeitdialog von Android;
+Abbruch in einem der beiden ändert nichts. Die gewählte Zeit gilt auf die volle Minute, damit ein
+zweiter Import mit derselben Wahl ein Doppelter bleibt. Stammt der Zeitpunkt nicht aus dem Foto,
+steht dort der angenommene Zeitpunkt, und darunter folgt über die ganze Breite eine zweite Zeile,
+klein auf `uncertain`-Gelb: „Zeitpunkt nicht im Foto, jetzt angenommen; antippen zum Ändern“. Sie
+verschwindet, sobald eine Zeit gewählt ist.
 
 ### 2. Fortschrittsbalken
 
@@ -139,5 +142,5 @@ In `COLORS` (`app/src/theme.ts`):
 | `erkannt`, erkannte Fotos im Balken | `#b5b5b5` | `#6a6a6a` |
 
 Alles andere nutzt die übrigen Farben: `text` für den Rahmen, `line` für die Trennlinien,
-`sub` für Beschriftung und Zeitpunkt, `uncertain` für unsichere Felder, `photo` für den Grund des
-Balkens.
+`sub` für die Beschriftungen, `focus` für den antippbaren Zeitpunkt, `uncertain` für unsichere
+Felder, `photo` für den Grund des Balkens.

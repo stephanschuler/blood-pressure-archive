@@ -196,6 +196,41 @@ test('Zurück-Taste bei einer Aufnahme fragt nach; Abbrechen behält sie, Verwer
   expect(db.listMessungen()).toEqual([]);
 });
 
+/** Wählt im Datumsdialog `tag`, im folgenden Uhrzeitdialog `uhr`; null bricht den Dialog ab. */
+async function zeitWaehlen(tag: Date | null, uhr?: Date) {
+  const open = DateTimePickerAndroid.open as jest.Mock;
+  await fireEvent.press(screen.getByHintText('Zeit ändern'));
+  expect(open.mock.calls.at(-1)[0].mode).toBe('date');
+  await act(async () => open.mock.calls.at(-1)[0].onChange({ type: tag ? 'set' : 'dismissed' }, tag ?? undefined));
+  if (!tag) return;
+  expect(open.mock.calls.at(-1)[0].mode).toBe('time');
+  await act(async () => open.mock.calls.at(-1)[0].onChange({ type: 'set' }, uhr));
+}
+
+test('Zeit ohne EXIF wählen: Datum, dann Uhrzeit auf die volle Minute; Hinweis verschwindet', async () => {
+  foto.importPhotos.mockResolvedValue([{ ...FOTO, temporaer: false }]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  expect(await screen.findByText(/^Zeitpunkt nicht im Foto/)).toBeOnTheScreen();
+  await zeitWaehlen(null);
+  expect(DateTimePickerAndroid.open).toHaveBeenCalledTimes(1);
+  await zeitWaehlen(new Date(2025, 11, 24), new Date(2025, 11, 24, 8, 15, 33));
+  expect(screen.queryByText(/^Zeitpunkt nicht im Foto/)).toBeNull();
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  expect(db.listMessungen()[0].punkte[0].zeit).toBe(new Date(2025, 11, 24, 8, 15).toISOString());
+});
+
+test('Bearbeiten ändert auch die Zeit', async () => {
+  db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
+  await render(<App />);
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
+  await zeitWaehlen(new Date(2025, 11, 24), new Date(2025, 11, 24, 19, 30));
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  expect(db.listMessungen()[0].punkte[0]).toMatchObject({ zeit: new Date(2025, 11, 24, 19, 30).toISOString(), sys: 130 });
+});
+
 test('Zurück-Taste bei einem Foto aus der Galerie verwirft ohne Rückfrage', async () => {
   const back = backButton();
   const alert = rueckfrage();

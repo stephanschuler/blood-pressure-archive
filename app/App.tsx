@@ -1,3 +1,4 @@
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
@@ -149,7 +150,7 @@ function Main() {
         <Bearbeiten
           key={bearbeiten.id}
           punkt={bearbeiten}
-          onSave={(w) => { updateMesspunkt(bearbeiten.id, w); setBearbeiten(null); setMessungen(listMessungen()); }}
+          onSave={(p) => { updateMesspunkt(bearbeiten.id, p); setBearbeiten(null); setMessungen(listMessungen()); }}
           onDelete={() => askDelete(bearbeiten)}
           c={c}
         />
@@ -189,24 +190,48 @@ type Werte = Pick<Messpunkt, 'sys' | 'dia' | 'puls'>;
 
 const zeitpunkt = (d: Date) => d.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+/** Datum, dann Uhrzeit; Abbruch in einem der beiden Dialoge ändert nichts. */
+function zeitWaehlen(d: Date, onWahl: (d: Date) => void) {
+  DateTimePickerAndroid.open({
+    value: d, mode: 'date', maximumDate: new Date(),
+    onChange: (e, tag) => {
+      if (e.type !== 'set' || !tag) return;
+      DateTimePickerAndroid.open({
+        value: tag, mode: 'time', is24Hour: true,
+        // volle Minute: ein zweiter Import desselben Fotos mit derselben Wahl bleibt ein Doppelter
+        onChange: (e, t) => { if (e.type === 'set' && t) onWahl(new Date(new Date(t).setSeconds(0, 0))); },
+      });
+    },
+  });
+}
+
+function Zeit({ zeit, onChange, c }: { zeit: Date; onChange: (d: Date) => void; c: Colors }) {
+  return (
+    <Pressable onPress={() => zeitWaehlen(zeit, onChange)} accessibilityRole="button" accessibilityHint="Zeit ändern">
+      <Text style={{ color: c.focus, textDecorationLine: 'underline' }}>{zeitpunkt(zeit)}</Text>
+    </Pressable>
+  );
+}
+
 function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; nr: number; gesamt: number; bereit: number; onDone: () => void; c: Colors }) {
   const { foto, reading } = offen;
+  const [zeit, setZeit] = useState(foto.zeit);
   return (
     <Werteingabe
       werte={reading!.values}
       unsicher={reading!.uncertain}
       bild={foto.uri}
       links={{ label: 'Verwerfen', onPress: onDone }}
-      onSave={(w) => { insertMesspunkt({ zeit: foto.zeit.toISOString(), ...w }); onDone(); }}
+      onSave={(w) => { insertMesspunkt({ zeit: zeit.toISOString(), ...w }); onDone(); }}
       c={c}
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
-        <Text style={{ color: c.sub }}>{zeitpunkt(foto.zeit)}</Text>
+        <Zeit zeit={zeit} onChange={setZeit} c={c} />
       </View>
-      {!foto.zeitAusExif && (
+      {!foto.zeitAusExif && zeit === foto.zeit && (
         <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
-          Zeitpunkt nicht im Foto, jetzt angenommen
+          Zeitpunkt nicht im Foto, jetzt angenommen; antippen zum Ändern
         </Text>
       )}
       <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
@@ -218,12 +243,19 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
 }
 
 // Abbrechen ist die Zurück-Taste (Main): für einen eigenen Knopf fehlt ein Symbol
-function Bearbeiten({ punkt, onSave, onDelete, c }: { punkt: Messpunkt; onSave: (w: Werte) => void; onDelete: () => void; c: Colors }) {
+function Bearbeiten({ punkt, onSave, onDelete, c }: { punkt: Messpunkt; onSave: (p: Omit<Messpunkt, 'id'>) => void; onDelete: () => void; c: Colors }) {
+  const [zeit, setZeit] = useState(() => new Date(punkt.zeit));
   return (
-    <Werteingabe werte={[punkt.sys, punkt.dia, punkt.puls]} unsicher={[false, false, false]} links={{ label: 'Löschen', onPress: onDelete }} onSave={onSave} c={c}>
+    <Werteingabe
+      werte={[punkt.sys, punkt.dia, punkt.puls]}
+      unsicher={[false, false, false]}
+      links={{ label: 'Löschen', onPress: onDelete }}
+      onSave={(w) => onSave({ zeit: zeit.toISOString(), ...w })}
+      c={c}
+    >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Messpunkt bearbeiten</Text>
-        <Text style={{ color: c.sub }}>{zeitpunkt(new Date(punkt.zeit))}</Text>
+        <Zeit zeit={zeit} onChange={setZeit} c={c} />
       </View>
     </Werteingabe>
   );

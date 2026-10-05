@@ -126,9 +126,9 @@ Eine Zeile:
 **Antippen** klappt die Messpunkte auf: grauer Kasten, je Messpunkt Uhrzeit, SYS, DIA, PUL, darunter
 der Hinweis „Antippen zum Bearbeiten, lange drücken zum Löschen“. **Langes Drücken** auf einen
 Messpunkt fragt nach und löscht ihn. **Antippen** öffnet ihn in der Werteingabe der
-Prüfansicht, ohne Foto und Fortschritt, Kopf „Messpunkt bearbeiten“ mit seiner Zeit. Speichern
-ändert die drei Werte, die Zeit bleibt; gleicht er danach einem anderen Messpunkt derselben Zeit,
-bleibt einer. Links steht „Löschen“ mit Rückfrage, die Zurück-Taste bricht ab. Mehrere Messungen dürfen zugleich aufgeklappt sein. Zu Beginn ist keine
+Prüfansicht, ohne Foto und Fortschritt, Kopf „Messpunkt bearbeiten“ mit seiner Zeit; die Zeit lässt
+sich wie dort antippen und ändern. Gleicht er nach dem Speichern einem anderen Messpunkt derselben
+Zeit, bleibt einer. Links steht „Löschen“ mit Rückfrage, die Zurück-Taste bricht ab. Mehrere Messungen dürfen zugleich aufgeklappt sein. Zu Beginn ist keine
 aufgeklappt.
 
 ### 9. Kurvenleiste

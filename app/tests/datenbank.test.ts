@@ -33,16 +33,17 @@ test('derselbe Messpunkt wird nur einmal gespeichert', () => {
   assert.deepEqual(listMessungen(db)[0].punkte.map((x) => x.puls), [60, 61]);
 });
 
-test('Messpunkt bearbeiten: Werte ändern sich, Zeit bleibt; gleicht er einem anderen, bleibt einer', () => {
+test('Messpunkt bearbeiten: Zeit und Werte ändern sich; gleicht er einem anderen, bleibt einer', () => {
   const db = memoryDb();
   migrate(db);
   const zeit = '2026-01-01T07:00:00.000Z';
   insertMesspunkt(db, { zeit, sys: 130, dia: 85, puls: 60 });
   insertMesspunkt(db, { zeit, sys: 180, dia: 85, puls: 60 });
   const [a, b] = listMessungen(db)[0].punkte;
-  updateMesspunkt(db, b.id, { sys: 131, dia: 86, puls: 61 });
-  assert.deepEqual(listMessungen(db)[0].punkte.map((p) => [p.zeit, p.sys, p.dia, p.puls]), [[zeit, 130, 85, 60], [zeit, 131, 86, 61]]);
-  updateMesspunkt(db, b.id, { sys: a.sys, dia: a.dia, puls: a.puls });
+  const spaeter = '2026-01-01T07:05:00.000Z';
+  updateMesspunkt(db, b.id, { zeit: spaeter, sys: 131, dia: 86, puls: 61 });
+  assert.deepEqual(listMessungen(db)[0].punkte.map((p) => [p.zeit, p.sys, p.dia, p.puls]), [[zeit, 130, 85, 60], [spaeter, 131, 86, 61]]);
+  updateMesspunkt(db, b.id, { zeit, sys: a.sys, dia: a.dia, puls: a.puls });
   assert.equal(zaehlen(db), 1);
 });
 

@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
+import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
-import type { Reading } from './src/erkennung/messwerte';
-import { discard, importPhotos, messzeit, recognize, takePhoto, type Foto } from './src/foto';
+import { importPhotos, messzeit, takePhoto } from './src/foto';
 import type { Messpunkt } from './src/messung';
+import { useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
 import { csv, xlsx } from './src/tabelle';
@@ -16,12 +16,6 @@ import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 migrate();
 
 Appearance.setColorScheme(parseTheme(getSetting('theme')));
-
-type Offen = { foto: Foto; reading: Reading | null };
-
-/** Schon gespeichert, etwa bei einem zweiten Import desselben Fotos: keine Bestätigung nötig. */
-const bekannt = (foto: Foto, { values: [sys, dia, puls] }: Reading) =>
-  sys !== null && dia !== null && puls !== null && hasMesspunkt({ zeit: foto.zeit.toISOString(), sys, dia, puls });
 
 export default function App() {
   return (
@@ -35,53 +29,9 @@ function Main() {
   const c = COLORS[useColorScheme() === 'dark' ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
-  const [queue, setQueue] = useState<Foto[]>([]);
-  const [gesamt, setGesamt] = useState(0);
-  const [offen, setOffen] = useState<Offen | null>(null);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   const [menue, setMenue] = useState(false);
-  const [erkannt, setErkannt] = useState(new Set<Foto>());
-  // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
-  const active = useRef<Foto | null>(null);
-  const readings = useRef(new Map<Foto, Promise<Reading>>());
-  const recognizeOnce = (foto: Foto) => {
-    let p = readings.current.get(foto);
-    if (!p) {
-      p = recognize(foto).catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
-      readings.current.set(foto, p);
-      p.then(() => setErkannt((s) => new Set(s).add(foto)));
-    }
-    return p;
-  };
-
-  // alle Fotos der Warteschlange erkennen, das erste zur Entscheidung vorlegen
-  useEffect(() => {
-    queue.forEach(recognizeOnce);
-    if (offen || !queue.length) return;
-    const foto = queue[0];
-    active.current = foto;
-    setOffen({ foto, reading: null });
-    recognizeOnce(foto).then((reading) => {
-      if (active.current !== foto) return;
-      if (bekannt(foto, reading)) drop(foto);
-      else setOffen({ foto, reading });
-    });
-  }, [queue, offen]);
-
-  const drop = (foto: Foto) => {
-    discard(foto);
-    readings.current.delete(foto);
-    active.current = null;
-    setOffen(null);
-    setQueue((q) => q.slice(1));
-    setMessungen(listMessungen());
-  };
-  const next = () => offen && drop(offen.foto);
-  const enqueue = (fotos: Foto[]) => {
-    setGesamt(fotos.length);
-    setErkannt(new Set());
-    setQueue(fotos);
-  };
+  const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
 
   // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
   useEffect(() => {
@@ -156,7 +106,7 @@ function Main() {
     return (
       <View style={screen}>
         {offen.reading ? (
-          <Bestaetigung key={offen.foto.uri} offen={offen} nr={gesamt - queue.length + 1} gesamt={gesamt} bereit={queue.filter((f) => erkannt.has(f)).length} onDone={next} c={c} />
+          <Bestaetigung key={offen.foto.uri} offen={offen} nr={nr} gesamt={gesamt} bereit={bereit} onDone={next} c={c} />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Loader />

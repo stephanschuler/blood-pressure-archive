@@ -9,7 +9,7 @@ Foto Sekunden; im JS-Thread hing die App bei jedem Tippen, solange weitere Fotos
 - **Der Worklet, der die Erkennung aufruft, steht in `src/foto.ts`.** Nur dessen relative Imports
   gibt `app/babel.config.js` frei (`importForwarding.relativePaths`). Anderer Ort: dort eintragen.
 - **Verkleinern nacheinander, Lesen höchstens `RUNTIMES` zugleich** (`src/foto.ts`): sonst liegen
-  alle Fotos zugleich in voller Größe im Speicher. `App.tsx` ruft `recognize()` ohne eigene Kette.
+  alle Fotos zugleich in voller Größe im Speicher. `src/queue.ts` ruft `recognize()` ohne eigene Kette.
 - **Metro-Patch je Metro-Version** (`app/patches/`, aus `react-native-worklets/bundleMode/patches`
   im Worklets-Repo). Nach einem Expo-Update prüfen, ob `npm ci` ihn noch anwendet; ohne ihn bricht
   das Bündeln mit „Failed to get the SHA-1".

@@ -509,7 +509,7 @@ Messrichtung quer dazu fest.
   Plausibilitätsprüfung). Ein Feld ist sicher, wenn mindestens eine Kette dort denselben Wert
   liefert, sonst unsicher.
 - **Rückweisung:** kein plausibles Tripel oder Widerspruch → alle drei Felder `null`. Eine
-  Ausnahme in der Runtime fängt `App.tsx` ab und liefert ebenfalls drei leere Felder.
+  Ausnahme in der Runtime fängt `useQueue` (`src/queue.ts`) ab und liefert ebenfalls drei leere Felder.
 - **In der App:** unsichere und leere Felder gelb hinterlegt; gespeichert wird erst nach
   Bestätigung durch den Nutzer.
 
@@ -541,6 +541,7 @@ Messrichtung quer dazu fest.
 | `make test` → `app/tests/messwerte.test.ts` | künstliche Szene: beide Wege lesen dasselbe; Tastenweg hebt Neigung auf, beide Richtungen; Ränder allein, auch gedreht; Widerspruch → keiner; ohne Gerät nichts | künstlich |
 | `make test` → `app/tests-ui/App.test.tsx` | Oberfläche, `recognize()` als Attrappe | künstlich |
 | `make test` → `app/tests-ui/foto.test.ts` | `recognize()`: höchstens drei zugleich, Verkleinern nacheinander, Runtime frei nach Fehler; Runtime und Manipulator als Attrappe | künstlich |
+| `make test` → `app/tests-ui/queue.test.ts` | Erkennung scheitert → leere Felder zur Bestätigung; `recognize()` als Attrappe | künstlich |
 | `make test-archiv` | 1.510 Fotos, Grenzwerte ≥ 87,5 % gelesen, ≤ 5 unmarkiert falsch; Vergleich mit Python, wenn `referenz.csv` vorliegt | lokal, `daten/` |
 
 Die künstlichen Displays halten Geistersegmente unter der Untergrenze von 12 % Kontrast; sonst

@@ -1,21 +1,25 @@
 /// <reference types="jest" />
 // Oberfläche mit echter SQLite-Datenbank (node:sqlite); Kamera, Bildauswahl und Erkennung sind Attrappen.
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, Appearance, BackHandler } from 'react-native';
 
 import type { Reading } from '../src/erkennung/messwerte';
 import type { Foto } from '../src/foto';
 
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Directory, File } from 'expo-file-system';
+import { shareAsync } from 'expo-sharing';
 
 import App from '../App';
+import * as datenbank from '../src/datenbank';
 import * as db from '../src/db';
 import * as fotoModule from '../src/foto';
 import { memoryDb } from '../tests/sqlite';
 
 // db.ts öffnet die Datenbank einmal beim Laden; die Attrappe leitet an die Datenbank des laufenden Tests weiter
-declare global { var testDb: ReturnType<typeof memoryDb>; }
+declare global { var testDb: ReturnType<typeof memoryDb>; var sicherung: ReturnType<typeof memoryDb> & { closeSync: jest.Mock }; }
 jest.mock('expo-sqlite', () => ({
+  deserializeDatabaseSync: () => globalThis.sicherung,
   openDatabaseSync: () => new Proxy({}, {
     // App.tsx migriert schon beim Laden, vor beforeEach: dann erste Datenbank hier anlegen
     get: (_, k: string) => (...a: unknown[]) => ((globalThis.testDb ??= require('../tests/sqlite').memoryDb()) as any)[k](...a),
@@ -23,6 +27,12 @@ jest.mock('expo-sqlite', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn(), messzeit: () => null }));
+jest.mock('expo-file-system', () => ({
+  Directory: { pickDirectoryAsync: jest.fn() },
+  File: Object.assign(jest.fn(() => ({ uri: 'file:///cache/datei', create: jest.fn(), write: jest.fn() })), { pickFileAsync: jest.fn() }),
+  Paths: { cache: 'cache' },
+}));
+jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }));
 jest.mock('@react-native-community/datetimepicker', () => ({ DateTimePickerAndroid: { open: jest.fn() } }));
 
 const foto = fotoModule as jest.Mocked<typeof fotoModule>;
@@ -274,4 +284,99 @@ test('sichtbare Zeilen melden: SectionList übergibt keyExtractor auch den Monat
   const zellen = container.queryAll((n) => n.type === 'View' && !!n.props.onFocusCapture);
   for (const [i, z] of zellen.entries()) await fireEvent(z, 'layout', layout({ y: i * 40 }));
   expect(screen.getByText('Januar 2026')).toBeOnTheScreen();
+});
+
+/** Ordnerwahl, die den Ordner liefert; geschrieben wird in write. */
+function ordner(write = jest.fn()) {
+  const createFile = jest.fn(() => ({ write }));
+  (Directory.pickDirectoryAsync as jest.Mock).mockResolvedValue({ createFile });
+  return { createFile, write };
+}
+
+/** Das Menü schließt sich mit jedem Eintrag. */
+async function menue(eintrag: string) {
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  await fireEvent.press(screen.getByRole('button', { name: eintrag }));
+}
+
+test('Sichern: Datenbank in den gewählten Ordner, Rückmeldung mit Anzahl', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  jest.spyOn(db, 'sichern').mockReturnValue(new Uint8Array([1, 2, 3]));
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { createFile, write } = ordner();
+  await render(<App />);
+  await menue('Speichern');
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Gesichert', '1 Messpunkte.'));
+  expect(createFile).toHaveBeenCalledWith(expect.stringMatching(/^blutdruck-\d{4}-\d\d-\d\d\.sqlite$/), 'application/octet-stream');
+  expect(write).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
+});
+
+test('Sichern: Abbruch der Ordnerwahl meldet nichts, Schreibfehler wird angezeigt', async () => {
+  jest.spyOn(db, 'sichern').mockReturnValue(new Uint8Array([1]));
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  (Directory.pickDirectoryAsync as jest.Mock).mockRejectedValue(new Error('cancelled'));
+  await render(<App />);
+  await menue('Speichern');
+  await act(() => new Promise((r) => setTimeout(r, 50)));
+  expect(alert).not.toHaveBeenCalled();
+  ordner(jest.fn(() => { throw new Error('kein Platz'); }));
+  await menue('Speichern');
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Nicht gesichert', 'Error: kein Platz'));
+});
+
+test('Einspielen: neue Messpunkte übernommen, doppelte übersprungen, Sicherung geschlossen', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  globalThis.sicherung = Object.assign(memoryDb(), { closeSync: jest.fn() });
+  datenbank.migrate(globalThis.sicherung);
+  datenbank.insertMesspunkt(globalThis.sicherung, { zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  datenbank.insertMesspunkt(globalThis.sicherung, { zeit: '2026-01-02T07:00:00.000Z', sys: 131, dia: 86, puls: 61 });
+  (File.pickFileAsync as jest.Mock).mockResolvedValue({ result: { bytes: () => new Uint8Array([1]) } });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await render(<App />);
+  await menue('Einspielen');
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Eingespielt', '2 Messpunkte gelesen, 1 neu übernommen.'));
+  expect(db.zaehlen()).toBe(2);
+  expect(globalThis.sicherung.closeSync).toHaveBeenCalled();
+  expect(screen.getAllByText('1 Pkt.')).toHaveLength(2);
+});
+
+test('Einspielen: Abbruch, fremde Datei und Sicherung einer neueren Version', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const pick = File.pickFileAsync as jest.Mock;
+  pick.mockResolvedValue({ result: null });
+  await render(<App />);
+  await menue('Einspielen');
+  await act(() => new Promise((r) => setTimeout(r, 50)));
+  expect(alert).not.toHaveBeenCalled();
+
+  pick.mockResolvedValue({ result: { bytes: () => new Uint8Array([1]) } });
+  globalThis.sicherung = Object.assign(memoryDb(), { closeSync: jest.fn() });
+  await menue('Einspielen');
+  await waitFor(() => expect(alert).toHaveBeenLastCalledWith('Nicht eingespielt', 'Keine Datensicherung dieser App.'));
+  expect(globalThis.sicherung.closeSync).toHaveBeenCalled();
+
+  globalThis.sicherung.execSync(`PRAGMA user_version = ${datenbank.MIGRATIONS.length + 1}`);
+  await menue('Einspielen');
+  await waitFor(() => expect(alert).toHaveBeenLastCalledWith('Nicht eingespielt', 'Die Sicherung stammt von einer neueren App-Version.'));
+  expect(db.zaehlen()).toBe(0);
+});
+
+test('Tabelle: CSV und XLSX in den Ordner, XLSX ins Teilen-Blatt', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { createFile, write } = ordner();
+  await render(<App />);
+  await menue('Als CSV speichern');
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Gespeichert', '1 Messpunkte.'));
+  expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.csv$/), 'text/csv');
+  expect(write.mock.calls[0][0]).toContain('128');
+
+  await menue('Als XLSX speichern');
+  await waitFor(() => expect(alert).toHaveBeenCalledTimes(2));
+  expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.xlsx$/), expect.stringContaining('spreadsheetml'));
+  expect(write.mock.calls[1][0]).toBeInstanceOf(Uint8Array);
+
+  await menue('In Google Drive ablegen');
+  await waitFor(() => expect(shareAsync).toHaveBeenCalledWith('file:///cache/datei', expect.objectContaining({ mimeType: expect.stringContaining('spreadsheetml') })));
+  expect((File as unknown as jest.Mock).mock.calls.at(-1)).toEqual(['cache', expect.stringMatching(/^blutdruck-\d{4}-\d\d-\d\d\.xlsx$/)]);
 });

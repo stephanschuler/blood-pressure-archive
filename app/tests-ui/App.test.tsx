@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 // Oberfläche mit echter SQLite-Datenbank (node:sqlite); Kamera, Bildauswahl und Erkennung sind Attrappen.
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert, Appearance, BackHandler, SectionList } from 'react-native';
+import { Alert, Appearance, BackHandler, Dimensions, SectionList } from 'react-native';
 
 import type { Reading } from '../src/erkennung/messwerte';
 import type { Foto } from '../src/foto';
@@ -441,32 +441,61 @@ test('Zeitleiste per Bedienungshilfe: zurück springt in den Vormonat, vor in de
   expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 0 }));
 });
 
-test('Zeitleiste ziehen: ein Sprung je Frame, beim Loslassen an die letzte Stelle', async () => {
+/** Berührung am Henkel; x ist der Abstand vom rechten Bildschirmrand, vorher die Höhe des letzten Move-Events. */
+// PanResponder zählt nur Bewegungen, die jünger sind als die zuletzt gezählte
+let zeitstempel = 0;
+const beruehrung = (dy: number, x = 4, vorher = 0) => {
+  const pageX = Dimensions.get('window').width - x, t = ++zeitstempel;
+  return {
+    nativeEvent: { locationY: 32, pageX, pageY: dy, touches: [{}], changedTouches: [{}] },
+    touchHistory: {
+      numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: t,
+      touchBank: [{ touchActive: true, startPageX: pageX, startPageY: 0, startTimeStamp: 0, currentPageX: pageX, currentPageY: dy, currentTimeStamp: t, previousPageX: pageX, previousPageY: vorher, previousTimeStamp: t - 1 }],
+    },
+  };
+};
+
+test('Henkel ziehen: ein Sprung je Frame, beim Loslassen an die letzte Stelle', async () => {
   const jetzt = new Date();
   db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth() - 1, 15, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
   db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 1).toISOString(), sys: 140, dia: 90, puls: 70 });
   const scroll = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
   await render(<App />);
-  const leiste = screen.getByLabelText('Zeitleiste');
-  await fireEvent(leiste, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 40, height: 400 } } });
-  const beruehrung = (y: number) => ({
-    nativeEvent: { locationY: y, pageY: y, touches: [{}], changedTouches: [{}] },
-    touchHistory: {
-      numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: 1,
-      touchBank: [{ touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0, currentPageX: 0, currentPageY: y, currentTimeStamp: 1, previousPageX: 0, previousPageY: 0, previousTimeStamp: 0 }],
-    },
-  });
+  await fireEvent(screen.getByTestId('henkelbahn'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 400 } } });
+  const henkel = screen.getByLabelText('Zeitleiste');
   // kein Frame vergeht, solange der Test ihn nicht auslöst
   const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation(() => 1);
   jest.spyOn(global, 'cancelAnimationFrame').mockImplementation(() => {});
-  await fireEvent(leiste, 'responderGrant', beruehrung(0));
-  await fireEvent(leiste, 'responderMove', beruehrung(200));
-  await fireEvent(leiste, 'responderMove', beruehrung(400));
+  await fireEvent(henkel, 'responderGrant', beruehrung(0));
+  await fireEvent(henkel, 'responderMove', beruehrung(200));
+  await fireEvent(henkel, 'responderMove', beruehrung(400, 4, 200));
   expect(frame).toHaveBeenCalledTimes(1);
   expect(scroll).not.toHaveBeenCalled();
-  await fireEvent(leiste, 'responderRelease', beruehrung(400));
+  await fireEvent(henkel, 'responderRelease', beruehrung(400, 4, 400));
   expect(scroll).toHaveBeenCalledTimes(1);
   expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 1 }));
+});
+
+test('Henkel: Finger weit links vom Rand geht Tag für Tag, gezählt ab dem Wechsel', async () => {
+  const jetzt = new Date();
+  const tag = (vor: number) => new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate() - vor, 7);
+  for (const vor of [1, 2, 3, 4, 5, 6, 7, 8]) db.insertMesspunkt({ zeit: tag(vor).toISOString(), sys: 130, dia: 85, puls: 60 });
+  jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+  jest.spyOn(global, 'requestAnimationFrame').mockImplementation((f) => { f(0); return 0; });
+  await render(<App />);
+  await fireEvent(screen.getByTestId('henkelbahn'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 400 } } });
+  const henkel = screen.getByLabelText('Zeitleiste');
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const titel = (d: Date) => `${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()]} ${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}`;
+  await fireEvent(henkel, 'responderGrant', beruehrung(0));
+  expect(screen.getByText(titel(tag(1)))).toBeOnTheScreen();
+  // grob wären 30 dp schon ein Tag weiter; fein zählt erst ab dem Wechsel, dann 10 dp je Tag
+  await fireEvent(henkel, 'responderMove', beruehrung(30, 100));
+  expect(screen.getByText(titel(tag(1)))).toBeOnTheScreen();
+  await fireEvent(henkel, 'responderMove', beruehrung(50, 100, 30));
+  expect(screen.getByText(titel(tag(3)))).toBeOnTheScreen();
+  await fireEvent(henkel, 'responderRelease', beruehrung(50, 100, 50));
+  expect(screen.queryByText(titel(tag(3)))).toBeNull();
 });
 
 /** Ordnerwahl, die den Ordner liefert; geschrieben wird in write. */

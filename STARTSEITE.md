@@ -138,22 +138,26 @@ Von links: **Von Hand eintragen** (`edit`), Importieren, Aufnehmen; Aufnehmen bl
 rechten Daumen. Von Hand öffnet die Werteingabe wie beim Bearbeiten, Kopf „Messpunkt eintragen“,
 Felder leer, Zeit „jetzt“ auf die volle Minute und änderbar; links nur „Abbrechen“.
 
-### 9. Kurvenleiste
+### 9. Henkel
 
-Senkrechte Leiste am rechten Bildschirmrand, 40 dp breit, neben der Liste; die Liste rückt dafür
-ein.
+Keine Leiste neben der Liste: Eine Kurvenleiste nahm 40 dp weg und brachte zu wenig.
 
-- **Inhalt:** SYS und DIA als Kurve der Wochenmittel über die ganze Zeit, oben heute, unten die
-  älteste Messung, linear in der Zeit. Gestrichelt 80 und 140 mmHg, waagerechte Linien an jedem
-  Jahreswechsel mit `’25` darunter. Die Auswahl der Tageshälfte filtert auch hier.
-- **Position:** ein roter Strich markiert den obersten sichtbaren Tag, darauf am linken Rand ein
-  roter Griff. Scrollt die Liste, ist der Griff voll sichtbar, sonst halb durchsichtig.
-- **Antippen und Ziehen:** springt zum Tag unter dem Finger, ohne Messung zum nächstälteren.
-  Die Leiste bleibt dabei 40 dp breit. Links davon eine rote Blase mit dem Datum des Tags, auf dem
-  die Liste landet, etwa „Mi 10.04.2024“. Höchstens ein Sprung je Frame; das Diagramm zieht erst
-  beim Loslassen nach.
-- **Haptik:** ein kurzer Tick bei jedem Monatswechsel unter dem Finger.
+- **Form:** rote halbe Pille an der Bildkante, 14 × 56 dp, darin weiße Auf-ab-Pfeile. Sie
+  überdeckt keine Werte.
+- **Position:** steht auf Höhe des obersten sichtbaren Tags; jeder Tag mit Messung hat gleich viel
+  Weg, oben der neueste, unten der älteste. Oben und unten bleiben 56 dp frei, oben, damit der
+  Henkel den Kalenderknopf des Monatskopfs nicht verdeckt.
+- **Ruhe und Ausfahren:** in Ruhe ragen 3 dp ins Bild, mit 60 % Deckkraft. Scrollt die Liste,
+  fährt der Henkel in 300 ms ganz heraus und nach 1,5 s wieder ein.
+- **Ziehen:** springt von Tag zu Tag, ohne Messung zum nächstälteren. Liegt der Finger mehr als
+  60 dp links vom Rand, geht es Tag für Tag, je 10 dp Fingerweg; beim Wechsel zählt der Henkel vom
+  aktuellen Tag aus weiter. Links daneben ein Tooltip mit dem Datum, etwa „Mi 10.04.2024“, in
+  `tooltip`/`tooltipText` aus `COLORS`: hell dunkelgrau, dunkel hellgrau. Höchstens ein Sprung je
+  Frame; das Diagramm zieht erst beim Loslassen nach.
+- **Haptik:** ein kurzer Tick bei jedem Tageswechsel unter dem Finger.
 - **Bedienungshilfe:** einstellbares Element „Zeitleiste“; hoch und runter wechselt den Monat.
+- **Offen:** ob Androids Zurück-Geste am Bildschirmrand das senkrechte Ziehen stört; nur auf dem
+  Gerät zu prüfen.
 
 ## Symbole der Tageshälften
 

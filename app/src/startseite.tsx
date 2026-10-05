@@ -1,8 +1,8 @@
 // Übersicht der Messungen, Aufbau nach STARTSEITE.md.
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
-import { Fragment, memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text, View, type ViewToken } from 'react-native';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
@@ -26,7 +26,6 @@ const uhr = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 // Wochenzeile und Spaltenkopf richten sich danach aus.
 const BLATT = 36;
 const VOR_WERTEN = BLATT + 10 + 12 + 6 + 16 + 6 + 42;
-const LEISTE = 40;
 
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
@@ -124,7 +123,7 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
       </View>
       <Kennzahl auswahl={auswahl} mittel={sieben.mittel} vorwoche={sieben.vorwoche} c={c} />
       <Diagramm ms={ms} von={aeltester} heute={heute} bereich={bereich} c={c} />
-      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingRight: LEISTE + 6 - 16, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
+      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
         {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
       </View>
       {/* reicht bis an den Bildschirmrand: App.tsx rückt um 16 ein */}
@@ -132,7 +131,7 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
         <SectionList
           ref={liste}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingRight: LEISTE + 6 }}
+          contentContainerStyle={{ paddingRight: 16 }}
           sections={abschnitte}
           stickySectionHeadersEnabled
           extraData={[offen, markiert]}
@@ -166,9 +165,9 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
               : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
-        {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} onZiehen={ziehenMelden} c={c} />}
+        {aeltester && <Henkel abschnitte={abschnitte} sichtbar={sichtbar} onZiel={springen} onZiehen={ziehenMelden} c={c} />}
         {hinweis && (
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: LEISTE + 10, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 16, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
             <Text style={{ color: '#fff', fontSize: 13 }}>{hinweis}</Text>
           </View>
         )}
@@ -246,7 +245,7 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
 
   useEffect(() => {
     if (!breite) return;
-    // weiter als eine Breite, etwa nach dem Ziehen an der Kurvenleiste: springen, sonst liefen leere Kacheln durch
+    // weiter als eine Breite, etwa nach dem Ziehen am Henkel: springen, sonst liefen leere Kacheln durch
     if (zuletzt.current === null || Math.abs(ziel - zuletzt.current) > breite) verschiebung.setValue(ziel);
     else Animated.timing(verschiebung, { toValue: ziel, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
     zuletzt.current = ziel;
@@ -387,23 +386,36 @@ function Tageszeile({ tag, offen, markiert, onToggle, onEdit, onDelete, c }: Tag
 
 const ticken = () =>
   (Platform.OS === 'android' ? Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Tick) : Haptics.selectionAsync()).catch(() => {});
-const monatsnummer = (d: Date) => d.getFullYear() * 12 + d.getMonth();
 
-type LeisteProps = {
-  abschnitte: Abschnitt[]; von: Date; heute: Date; sichtbar: RefObject<Sichtbar | undefined>;
+// halbe Pille an der Bildkante: sichtbar 14 dp, in Ruhe bis auf den Anriss eingefahren
+const HENKEL = 14;
+const ANRISS = 3;
+const GRIFF = 64;
+// oben bleibt der Kalenderknopf des Monatskopfs frei
+const BAHN = 56;
+// Finger so weit links vom Rand: Tag für Tag, je JE_TAG Fingerweg
+const FEIN_AB = 60;
+const JE_TAG = 10;
+
+type HenkelProps = {
+  abschnitte: Abschnitt[]; sichtbar: RefObject<Sichtbar | undefined>;
   onZiel: (d: Date) => Tag | undefined; onZiehen: (an: boolean) => void; c: Colors;
 };
+type Finger = { py: number; x: number };
 
-/** Wochenmittel über die ganze Zeit, oben heute; zeigt den sichtbaren Ausschnitt, Antippen und Ziehen springt. */
-function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, onZiehen, c }: LeisteProps) {
+/** Fährt beim Scrollen aus; Ziehen springt von Tag zu Tag, jeder Tag gleich weit, mit einem Tick je Tag. */
+function Henkel({ abschnitte, sichtbar, onZiel, onZiehen, c }: HenkelProps) {
+  const { width } = useWindowDimensions();
+  const tage = useMemo(() => abschnitte.flatMap((a) => a.data.filter((z): z is Tag => z.art === 'tag')), [abschnitte]);
   const [hoehe, setHoehe] = useState(0);
   const [aktiv, setAktiv] = useState(false);
-  const [oben, setOben] = useState(heute);
+  const [oben, setOben] = useState<Date | null>(null);
   const [blase, setBlase] = useState<{ y: number; titel: string } | null>(null);
-  const wochen = useMemo(() => abschnitte.flatMap((a) => a.data.filter((z): z is Woche => z.art === 'woche')), [abschnitte]);
-  const monat = useRef(-1);
+  const aus = useRef(new Animated.Value(0)).current;
+  const finger = useRef<Finger>({ py: 0, x: 0 });
+  const bezug = useRef({ i: 0, py: 0, fein: false });
+  const letzter = useRef(-1);
   const start = useRef(0);
-  const py = useRef(0);
   const bild = useRef(0);
 
   useEffect(() => {
@@ -421,58 +433,55 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, onZiehen, c }:
     };
   }, [sichtbar]);
 
-  const spanne = Math.max(1, heute.getTime() - von.getTime());
-  const y = useMemo(() => (d: Date) => Math.min(Math.max((heute.getTime() - d.getTime()) / spanne, 0), 1) * hoehe, [heute, spanne, hoehe]);
+  const zeigen = aktiv || !!blase;
+  useEffect(() => {
+    Animated.timing(aus, { toValue: zeigen ? 1 : 0, duration: 300, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: true }).start();
+  }, [zeigen, aus]);
 
-  const kurven = useMemo(() => {
-    if (!hoehe) return null;
-    const x = (v: number) => 3 + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (LEISTE - 6);
-    const jahre: number[] = [];
-    for (let j = von.getFullYear() + 1; j <= heute.getFullYear(); j++) jahre.push(j);
-    return (
-      <Svg width={LEISTE} height={hoehe}>
-        {[80, 140].map((v) => <Line key={v} x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />)}
-        {(['sys', 'dia'] as const).map((k) => (
-          <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.1} />
-        ))}
-        {jahre.map((j) => (
-          <Fragment key={j}>
-            <Line x1={0} x2={LEISTE} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
-            <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>
-          </Fragment>
-        ))}
-      </Svg>
-    );
-  }, [hoehe, y, wochen, von, heute, c]);
+  const o = oben ?? tage[0].tag;
+  const index = Math.max(0, tage.findIndex((t) => t.tag.getTime() <= o.getTime()));
+  const n = Math.max(1, tage.length - 1);
+  const spur = Math.max(1, hoehe - 2 * BAHN);
+  const y = (i: number) => BAHN + (Math.min(Math.max(i, 0), n) / n) * spur;
 
-  const ziehen = (py: number) => {
-    const d = new Date(heute.getTime() - (Math.min(Math.max(py, 0), hoehe) / hoehe) * spanne);
-    const tag = onZiel(d);
+  const ziehen = ({ py, x }: Finger) => {
+    if (!hoehe) return;
+    const fein = width - x > FEIN_AB;
+    // beim Wechsel der Art von hier aus weiterzählen, sonst spränge die Liste
+    if (fein !== bezug.current.fein) bezug.current = { i: letzter.current < 0 ? bezug.current.i : letzter.current, py, fein };
+    const roh = fein ? bezug.current.i + Math.round((py - bezug.current.py) / JE_TAG) : Math.round(((py - BAHN) / spur) * n);
+    const i = Math.min(Math.max(roh, 0), tage.length - 1);
+    if (i === letzter.current) return;
+    letzter.current = i;
+    const tag = onZiel(tage[i].tag);
     if (!tag) return;
+    ticken();
     setOben(tag.tag);
-    const k = monatsnummer(tag.tag);
-    if (k !== monat.current) {
-      monat.current = k;
-      ticken();
-    }
-    setBlase({ y: Math.min(Math.max(py, 24), hoehe - 24), titel: `${WOCHENTAG[tag.tag.getDay()]} ${datum(tag.tag)}${tag.tag.getFullYear()}` });
+    setBlase({ y: Math.min(Math.max(y(i), 24), hoehe - 24), titel: `${WOCHENTAG[tag.tag.getDay()]} ${datum(tag.tag)}${tag.tag.getFullYear()}` });
   };
-  // PanResponder entsteht einmal; ziehen dagegen hängt an Höhe und Daten des letzten Renderns
-  const aktuell = useRef(ziehen);
-  aktuell.current = ziehen;
+  const beginnen = (locationY: number, x: number) => {
+    onZiehen(true);
+    start.current = y(index) + locationY - GRIFF / 2;
+    bezug.current = { i: index, py: start.current, fein: width - x > FEIN_AB };
+    letzter.current = -1;
+    vormerken({ py: start.current, x });
+  };
+  // PanResponder entsteht einmal; ziehen und beginnen hängen an Höhe und Daten des letzten Renderns
+  const aktuell = useRef({ ziehen, beginnen });
+  aktuell.current = { ziehen, beginnen };
   // höchstens ein Sprung je Frame: jedes Move-Event einzeln staut den JS-Thread, die Liste rendert nicht nach
-  const vormerken = (p: number) => {
-    py.current = p;
+  const vormerken = (f: Finger) => {
+    finger.current = f;
     bild.current ||= requestAnimationFrame(() => {
       bild.current = 0;
-      aktuell.current(py.current);
+      aktuell.current.ziehen(finger.current);
     });
   };
   const loslassen = () => {
     if (bild.current) {
       cancelAnimationFrame(bild.current);
       bild.current = 0;
-      aktuell.current(py.current);
+      aktuell.current.ziehen(finger.current);
     }
     setBlase(null);
     onZiehen(false);
@@ -481,38 +490,40 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, onZiehen, c }:
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: (e) => {
-      onZiehen(true);
-      start.current = e.nativeEvent.locationY;
-      monat.current = -1;
-      vormerken(start.current);
-    },
-    onPanResponderMove: (_, g) => vormerken(start.current + g.dy),
+    onPanResponderGrant: (e) => aktuell.current.beginnen(e.nativeEvent.locationY, e.nativeEvent.pageX),
+    onPanResponderMove: (_, g) => vormerken({ py: start.current + g.dy, x: g.moveX }),
     onPanResponderRelease: loslassen,
     onPanResponderTerminate: loslassen,
   })).current;
 
   return (
-    <>
+    <View testID="henkelbahn" pointerEvents="box-none" onLayout={(e) => setHoehe(e.nativeEvent.layout.height)} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}>
       <View
         {...pan.panHandlers}
-        onLayout={(e) => setHoehe(e.nativeEvent.layout.height)}
         accessibilityLabel="Zeitleiste"
         accessibilityRole="adjustable"
-        accessibilityValue={{ text: `${MONAT_LANG[oben.getMonth()]} ${oben.getFullYear()}` }}
+        accessibilityValue={{ text: `${MONAT_LANG[o.getMonth()]} ${o.getFullYear()}` }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-        onAccessibilityAction={(e) => onZiel(new Date(oben.getFullYear(), oben.getMonth() + (e.nativeEvent.actionName === 'increment' ? 2 : 0), 0))}
-        style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: LEISTE, backgroundColor: c.bg, borderLeftWidth: 1, borderColor: c.line }}
+        onAccessibilityAction={(e) => onZiel(new Date(o.getFullYear(), o.getMonth() + (e.nativeEvent.actionName === 'increment' ? 2 : 0), 0))}
+        style={{ position: 'absolute', right: 0, top: y(index) - GRIFF / 2, width: 2 * HENKEL, height: GRIFF, alignItems: 'flex-end', justifyContent: 'center' }}
       >
-        {kurven}
-        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: y(oben) - 1, height: 2, backgroundColor: ROT }} />
-        <View pointerEvents="none" style={{ position: 'absolute', left: -9, width: 18, height: 28, borderRadius: 9, backgroundColor: ROT, top: y(oben) - 14, opacity: blase || aktiv ? 1 : 0.55, elevation: 2 }} />
+        <Animated.View
+          style={{
+            width: HENKEL, height: 4 * HENKEL, borderTopLeftRadius: HENKEL, borderBottomLeftRadius: HENKEL, backgroundColor: ROT, paddingLeft: 2, justifyContent: 'center',
+            opacity: aus.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }),
+            transform: [{ translateX: aus.interpolate({ inputRange: [0, 1], outputRange: [HENKEL - ANRISS, 0] }) }],
+          }}
+        >
+          <Svg width={10} height={20} viewBox="0 0 10 20">
+            <Path d="M2 7l3-3 3 3M2 13l3 3 3-3" fill="none" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </Animated.View>
       </View>
       {blase && (
-        <View pointerEvents="none" style={{ position: 'absolute', right: LEISTE + 12, top: blase.y - 16, backgroundColor: ROT, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 12, elevation: 4 }}>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{blase.titel}</Text>
+        <View pointerEvents="none" style={{ position: 'absolute', right: 2 * HENKEL - 2, top: blase.y - 14, backgroundColor: c.tooltip, borderRadius: 4, paddingVertical: 4, paddingHorizontal: 8 }}>
+          <Text style={{ color: c.tooltipText, fontSize: 14, fontWeight: '500' }}>{blase.titel}</Text>
         </View>
       )}
-    </>
+    </View>
   );
 }

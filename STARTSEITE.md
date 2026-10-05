@@ -160,6 +160,23 @@ Keine Leiste neben der Liste: Eine Kurvenleiste nahm 40 dp weg und brachte zu we
 - **Offen:** ob Androids Zurück-Geste am Bildschirmrand das senkrechte Ziehen stört; nur auf dem
   Gerät zu prüfen.
 
+### 10. Raster
+
+Die Liste kennt die Höhe jedes Elements vorab (`getItemLayout`, `app/src/raster.ts`) und springt
+ohne Schätzung an jeden Tag. Dafür hat jeder Text eine feste Zeilenhöhe; die Höhen wachsen mit der
+Schriftgröße des Systems.
+
+In der Seitenleiste wählbar, Vorgabe 52:
+
+| Raster | Kopf | Woche | Messung | Messpunkt, Hinweis |
+|---|---|---|---|---|
+| 48 | 48 | 48 | 48 | 24 |
+| 52 | 52 | 52 | 52 | 26 |
+| 56 | 56 | 56 | 56 | 28 |
+
+Ein Tag ist die Summe seiner Messungen samt aufgeklapptem Kasten; die Trennlinie liegt darüber,
+ohne eigene Höhe, und das KW-Blatt steht mittig in der Wochenkarte.
+
 ## Symbole der Tageshälften
 
 Eine Sonne auf ihrem Tagesbogen, 16 dp in der Liste, 18 dp im Dropdown: ein gestrichelter

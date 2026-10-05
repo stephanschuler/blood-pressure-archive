@@ -10,6 +10,7 @@ import {
   type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
 import type { Messpunkt, Messung } from './messung';
+import { lagen, MASSE, SYMBOL, wertzeile, ZEILE, type Masse, type Raster } from './raster';
 import type { Colors } from './theme';
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -27,22 +28,22 @@ const uhr = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 const BLATT = 36;
 const ZEIT = 58;
 const VOR_WERTEN = BLATT + 10 + 16 + 6 + ZEIT;
-// Zeilenhöhe der fetten Werte: Symbol und Uhrzeit stehen auf ihrer Höhe
-const wertzeile = (groesse: number) => Math.round(groesse * 4 / 3);
 
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
 
-export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
-  messungen: Messung[]; auswahl: Auswahl; c: Colors; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void;
+export function Startseite({ messungen, auswahl, raster, c, onEdit, onDelete }: {
+  messungen: Messung[]; auswahl: Auswahl; raster: Raster; c: Colors; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void;
 }) {
   const [offen, setOffen] = useState(new Set<number>());
   const [markiert, setMarkiert] = useState<number | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const ms = useMemo(() => filtern(messungen, auswahl), [messungen, auswahl]);
   const abschnitte = useMemo(() => gliedern(ms), [ms]);
+  const m = MASSE[raster];
+  const { fontScale } = useWindowDimensions();
+  const lage = useMemo(() => lagen(abschnitte, m, offen, fontScale), [abschnitte, m, offen, fontScale]);
   const liste = useRef<SectionList<Woche | Tag, Abschnitt>>(null);
-  const ziel = useRef({ d: new Date(), versuche: 0 });
   const oben = useRef(new Date());
   const sichtbar = useRef<Sichtbar>(undefined);
   const bereich = useRef<Bereich>(undefined);
@@ -78,8 +79,7 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
   const heute = new Date();
   const aeltester = (abschnitte.at(-1)?.data.at(-1) as Tag | undefined)?.tag;
 
-  const springen = (d: Date, versuche = 0) => {
-    ziel.current = { d, versuche };
+  const springen = (d: Date) => {
     const z = tagSuchen(abschnitte, d);
     if (z) liste.current?.scrollToLocation({ sectionIndex: z.sectionIndex, itemIndex: z.itemIndex, viewOffset: 0, animated: false });
     return z?.tag;
@@ -123,26 +123,21 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
           contentContainerStyle={{ paddingHorizontal: 16 }}
           sections={abschnitte}
           stickySectionHeadersEnabled
-          extraData={[offen, markiert]}
+          extraData={[offen, markiert, m]}
           // beim Melden der Sichtbarkeit kommt für Monatskopf und -fuß der Abschnitt selbst
           keyExtractor={(z: Woche | Tag | Abschnitt) =>
             'monat' in z ? `monat${z.monat.getTime()}` : `${z.art}${(z.art === 'woche' ? z.von : z.tag).getTime()}`}
           onViewableItemsChanged={meldeSichtbar}
-          // Ziel noch nicht vermessen: grob dorthin, dann genau
-          onScrollToIndexFailed={(info) => {
-            liste.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
-            const { d, versuche } = ziel.current;
-            if (versuche < 3) setTimeout(() => ziel.current.d === d && springen(d, versuche + 1), 50);
-          }}
+          getItemLayout={(_, i) => ({ length: lage.laenge[i], offset: lage.versatz[i], index: i })}
           renderSectionHeader={({ section }) => (
             <Pressable
               onPress={datumWaehlen}
               accessibilityRole="button"
               accessibilityHint="Datum wählen"
-              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.bg, paddingTop: 8, paddingBottom: 4, borderBottomWidth: 2, borderColor: ROT }}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.bg, paddingTop: m.kopf[0], paddingBottom: m.kopf[1], borderBottomWidth: 2, borderColor: ROT }}
             >
-              <Text style={{ flex: 1, color: c.text, fontWeight: '700' }}>{MONAT_LANG[section.monat.getMonth()]} {section.monat.getFullYear()}</Text>
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={ROT} strokeWidth={2} strokeLinecap="round">
+              <Text numberOfLines={1} style={{ flex: 1, lineHeight: ZEILE.kopf, color: c.text, fontWeight: '700' }}>{MONAT_LANG[section.monat.getMonth()]} {section.monat.getFullYear()}</Text>
+              <Svg width={SYMBOL} height={SYMBOL} viewBox="0 0 24 24" fill="none" stroke={ROT} strokeWidth={2} strokeLinecap="round">
                 <Rect x={3} y={5} width={18} height={16} rx={2} />
                 <Path d="M3 10h18M8 3v4M16 3v4" />
               </Svg>
@@ -150,8 +145,8 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
           )}
           renderItem={({ item, index, section }) =>
             item.art === 'woche'
-              ? <Wochenzeile w={item} c={c} />
-              : <Tageszeile tag={item} vorWoche={section.data[index + 1]?.art === 'woche'} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
+              ? <Wochenzeile w={item} m={m} c={c} />
+              : <Tageszeile tag={item} vorWoche={section.data[index + 1]?.art === 'woche'} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} m={m} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
         {aeltester && <Henkel abschnitte={abschnitte} sichtbar={sichtbar} onZiel={springen} onZiehen={ziehenMelden} c={c} />}
@@ -192,7 +187,7 @@ function Tagesbogen({ haelfte, c, groesse = 16 }: { haelfte: Auswahl; c: Colors;
 function Trend({ wert, bezug, c }: { wert: number; bezug?: number; c: Colors }) {
   if (bezug === undefined) return null;
   const d = wert - bezug;
-  return <Text style={{ fontSize: 11, color: d > 2 ? c.up : d < -2 ? c.down : c.sub }}>{d > 0 ? '▲' : d < 0 ? '▼' : '•'}{Math.abs(d)}</Text>;
+  return <Text style={{ fontSize: 11, lineHeight: ZEILE.pfeil, color: d > 2 ? c.up : d < -2 ? c.down : c.sub }}>{d > 0 ? '▲' : d < 0 ? '▼' : '•'}{Math.abs(d)}</Text>;
 }
 
 /** Kennzahl und Auswahl der Tageshälfte; App.tsx setzt sie in die Titelzeile. */
@@ -355,23 +350,23 @@ function Wertspalten({ w, bezug, c, groesse = 18, farbe = c.text, strich }: { w:
   return (['sys', 'dia', 'puls'] as const).map((k) => (
     <View key={k} style={{ flex: 1, alignItems: 'flex-end' }}>
       <Text style={{ fontSize: groesse, lineHeight: wertzeile(groesse), fontWeight: '700', color: farbe }}>{w[k]}</Text>
-      {bezug ? <Trend wert={w[k]} bezug={bezug[k]} c={c} /> : <Text style={{ fontSize: 11, color: c.sub }}>{strich ? '–' : ' '}</Text>}
+      {bezug ? <Trend wert={w[k]} bezug={bezug[k]} c={c} /> : <Text style={{ fontSize: 11, lineHeight: ZEILE.pfeil, color: c.sub }}>{strich ? '–' : ' '}</Text>}
     </View>
   ));
 }
 
-function Wochenzeile({ w, c }: { w: Woche; c: Colors }) {
+function Wochenzeile({ w, m, c }: { w: Woche; m: Masse; c: Colors }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 8, marginHorizontal: -8, paddingTop: 10, paddingBottom: 8, paddingHorizontal: 8, borderRadius: 12, backgroundColor: c.chip }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: m.woche[0], marginHorizontal: -8, paddingTop: m.woche[1], paddingBottom: m.woche[2], paddingHorizontal: 8, borderRadius: 12, backgroundColor: c.chip }}>
       <View style={{ width: VOR_WERTEN, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {/* bleibt auch im Dunkelmodus hell */}
-        <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff', alignSelf: 'flex-start', marginTop: 3 }}>
-          <Text style={{ backgroundColor: '#666', color: '#fff', fontSize: 9, textAlign: 'center' }}>KW</Text>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#111', textAlign: 'center', paddingTop: 2, paddingBottom: 3 }}>{w.kw}</Text>
+        <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff', alignSelf: 'center' }}>
+          <Text style={{ backgroundColor: '#666', color: '#fff', fontSize: 9, lineHeight: ZEILE.kwKopf, textAlign: 'center' }}>KW</Text>
+          <Text style={{ fontSize: 15, lineHeight: ZEILE.kw, fontWeight: '700', color: '#111', textAlign: 'center', paddingTop: 2, paddingBottom: 3 }}>{w.kw}</Text>
         </View>
         <View>
-          <Text style={{ fontSize: 11, color: c.text }}>{datum(w.von)}–{datum(w.bis)}</Text>
-          <Text style={{ fontSize: 10, color: c.sub }}>{w.anzahl === 1 ? '1 Messung' : `${w.anzahl} Messungen`}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, lineHeight: ZEILE.zeitraum, color: c.text }}>{datum(w.von)}–{datum(w.bis)}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 10, lineHeight: ZEILE.anzahl, color: c.sub }}>{w.anzahl === 1 ? '1 Messung' : `${w.anzahl} Messungen`}</Text>
         </View>
       </View>
       <Wertspalten w={w.mittel} bezug={w.vorwoche} c={c} groesse={16} farbe={c.mid} strich />
@@ -379,19 +374,19 @@ function Wochenzeile({ w, c }: { w: Woche; c: Colors }) {
   );
 }
 
-function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
+function Kalenderblatt({ d, oben, c }: { d: Date; oben: number; c: Colors }) {
   return (
-    <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: c.chip, alignItems: 'stretch', alignSelf: 'flex-start', marginTop: 3 }}>
-      <Text style={{ backgroundColor: ROT, color: '#fff', fontSize: 9, textAlign: 'center' }}>{WOCHENTAG[d.getDay()]}</Text>
-      <Text style={{ fontSize: 15, fontWeight: '700', color: c.text, textAlign: 'center' }}>{d.getDate()}</Text>
-      <Text style={{ fontSize: 9, color: c.sub, textAlign: 'center', paddingBottom: 1 }}>{MONAT[d.getMonth()]}</Text>
+    <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: c.chip, alignItems: 'stretch', alignSelf: 'flex-start', marginTop: oben }}>
+      <Text style={{ backgroundColor: ROT, color: '#fff', fontSize: 9, lineHeight: ZEILE.blattKopf, textAlign: 'center' }}>{WOCHENTAG[d.getDay()]}</Text>
+      <Text style={{ fontSize: 15, lineHeight: ZEILE.tag, fontWeight: '700', color: c.text, textAlign: 'center' }}>{d.getDate()}</Text>
+      <Text style={{ fontSize: 9, lineHeight: ZEILE.monat, color: c.sub, textAlign: 'center', paddingBottom: 1 }}>{MONAT[d.getMonth()]}</Text>
     </View>
   );
 }
 
-type TagProps = { tag: Tag; vorWoche: boolean; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void; c: Colors };
+type TagProps = { tag: Tag; vorWoche: boolean; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void; m: Masse; c: Colors };
 
-function Tageszeile({ tag, vorWoche, offen, markiert, onToggle, onEdit, onDelete, c }: TagProps) {
+function Tageszeile({ tag, vorWoche, offen, markiert, onToggle, onEdit, onDelete, m: masse, c }: TagProps) {
   const leuchten = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!markiert) return;
@@ -400,14 +395,15 @@ function Tageszeile({ tag, vorWoche, offen, markiert, onToggle, onEdit, onDelete
   }, [markiert, leuchten]);
   const hinterlegt = leuchten.interpolate({ inputRange: [0, 1], outputRange: ['rgba(229,57,70,0)', 'rgba(229,57,70,0.4)'] });
   return (
-    <Animated.View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: vorWoche ? 0 : 1, borderColor: c.line, backgroundColor: hinterlegt }}>
-      <Kalenderblatt d={tag.tag} c={c} />
+    <Animated.View style={{ flexDirection: 'row', gap: 10, backgroundColor: hinterlegt }}>
+      {!vorWoche && <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, backgroundColor: c.line }} />}
+      <Kalenderblatt d={tag.tag} oben={masse.blatt} c={c} />
       <View style={{ flex: 1 }}>
         {tag.messungen.map((m, i) => {
           const auf = offen.has(m.punkte[0].id);
           return (
             <View key={m.punkte[0].id}>
-              <Pressable onPress={() => onToggle(m)} accessibilityRole="button" accessibilityState={{ expanded: auf }} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 }}>
+              <Pressable onPress={() => onToggle(m)} accessibilityRole="button" accessibilityState={{ expanded: auf }} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingTop: masse.messung[0], paddingBottom: masse.messung[1] }}>
                 <View style={{ height: wertzeile(18), flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Tagesbogen haelfte={tageshaelfte(m)} c={c} />
                   <View style={{ width: ZEIT, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -418,14 +414,14 @@ function Tageszeile({ tag, vorWoche, offen, markiert, onToggle, onEdit, onDelete
                 <Wertspalten w={m} bezug={tag.vorige[i]} c={c} />
               </Pressable>
               {auf && (
-                <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10, marginBottom: 8 }}>
+                <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10 }}>
                   {m.punkte.map((p) => (
-                    <Pressable key={p.id} onPress={() => onEdit(p)} onLongPress={() => onDelete(p)} accessibilityLabel={`Messpunkt ${uhr(new Date(p.zeit))}, ${p.sys}/${p.dia}, Puls ${p.puls}`} style={{ flexDirection: 'row', gap: 6, paddingVertical: 5 }}>
-                      <Text style={{ width: 40, fontSize: 13, color: c.sub }}>{uhr(new Date(p.zeit))}</Text>
-                      {[p.sys, p.dia, p.puls].map((v, i) => <Text key={i} style={{ flex: 1, textAlign: 'right', fontSize: 14, color: c.text }}>{v}</Text>)}
+                    <Pressable key={p.id} onPress={() => onEdit(p)} onLongPress={() => onDelete(p)} accessibilityLabel={`Messpunkt ${uhr(new Date(p.zeit))}, ${p.sys}/${p.dia}, Puls ${p.puls}`} style={{ flexDirection: 'row', gap: 6, paddingVertical: masse.punkt }}>
+                      <Text style={{ width: 40, fontSize: 13, lineHeight: ZEILE.punkt, color: c.sub }}>{uhr(new Date(p.zeit))}</Text>
+                      {[p.sys, p.dia, p.puls].map((v, i) => <Text key={i} style={{ flex: 1, textAlign: 'right', fontSize: 14, lineHeight: ZEILE.punkt, color: c.text }}>{v}</Text>)}
                     </Pressable>
                   ))}
-                  <Text style={{ fontSize: 11, color: c.sub, paddingTop: 2, paddingBottom: 6 }}>Antippen zum Bearbeiten, lange drücken zum Löschen</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 11, lineHeight: ZEILE.hinweis, color: c.sub, paddingTop: masse.hinweis[0], paddingBottom: masse.hinweis[1] }}>Antippen zum Bearbeiten, lange drücken zum Löschen</Text>
                 </View>
               )}
             </View>

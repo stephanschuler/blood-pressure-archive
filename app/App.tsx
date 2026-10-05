@@ -9,6 +9,7 @@ import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
 import type { Values } from './src/erkennung/segments';
 import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
+import { parseRaster, type Raster } from './src/raster';
 import type { Messpunkt } from './src/messung';
 import { erkennungsfehler, useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
@@ -36,6 +37,7 @@ function Main() {
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
+  const [raster, setRaster] = useState(() => parseRaster(getSetting('raster')));
   const [menue, setMenue] = useState(false);
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
   // 'neu': Eingabe von Hand, ohne Foto
@@ -67,6 +69,10 @@ function Main() {
     setSetting('theme', t);
     Appearance.setColorScheme(t);
     setTheme(t);
+  };
+  const waehleRaster = (r: Raster) => {
+    setSetting('raster', r);
+    setRaster(r);
   };
   const waehleAuswahl = (a: Auswahl) => {
     setSetting('tageshaelfte', a);
@@ -182,14 +188,14 @@ function Main() {
           </Text>
         </Pressable>
       )}
-      <Startseite messungen={messungen} auswahl={auswahl} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
+      <Startseite messungen={messungen} auswahl={auswahl} raster={raster} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <IconButton label="Von Hand eintragen" icon={require('./assets/edit.png')} onPress={() => setBearbeiten('neu')} />
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
       <StatusBar style="auto" />
     </View>
   );

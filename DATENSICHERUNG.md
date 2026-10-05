@@ -25,6 +25,8 @@
   Tipp daneben, mit der Zurück-Taste und nach jeder Aktion.
 - **Kopf:** App-Icon, „Blutdruck“.
 - **Darstellung:** Umschalter System | Hell | Dunkel. Wirkt sofort und wird gespeichert.
+- **Raster:** Umschalter 48 | 52 | 56 für die Liste der Startseite (`STARTSEITE.md`,
+  „Raster“). Wirkt sofort und wird gespeichert.
 - **Datensicherung:** Speichern (`download`), Einspielen (`upload_file`).
 - **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), In Google Drive ablegen
   (`add_to_drive`).

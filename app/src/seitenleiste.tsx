@@ -1,8 +1,9 @@
-// Seitenleiste nach DATENSICHERUNG.md: Darstellung, Datensicherung, Tabelle, Version.
+// Seitenleiste nach DATENSICHERUNG.md: Darstellung, Raster, Datensicherung, Tabelle, Version.
 import { Fragment, useEffect, useRef } from 'react';
 import { Animated, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RASTER, type Raster } from './raster';
 import { THEMES, THEME_LABEL, type Colors, type Theme } from './theme';
 
 export type Eintrag = { abschnitt: string; label: string; detail?: string; icon: number; onPress: () => void };
@@ -11,8 +12,8 @@ const BREITE = 268;
 // setzt buildenv/build-apk.sh; Metro und Tests kennen sie nicht
 const VERSION = process.env.EXPO_PUBLIC_VERSION ?? 'Entwicklung';
 
-export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, messzeit, fehler, c }: {
-  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; eintraege: Eintrag[]; messzeit: string | null; fehler: string | null; c: Colors;
+export function Seitenleiste({ offen, onClose, theme, onTheme, raster, onRaster, eintraege, messzeit, fehler, c }: {
+  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; raster: Raster; onRaster: (r: Raster) => void; eintraege: Eintrag[]; messzeit: string | null; fehler: string | null; c: Colors;
 }) {
   const insets = useSafeAreaInsets();
   const x = useRef(new Animated.Value(-BREITE)).current;
@@ -33,19 +34,9 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, messze
           <Text style={{ fontSize: 20, fontWeight: '600', color: c.text }}>Blutdruck</Text>
         </View>
         <Text style={titel}>Darstellung</Text>
-        <View style={{ flexDirection: 'row', backgroundColor: c.chip, borderRadius: 8, padding: 2, marginHorizontal: 16, marginVertical: 4 }}>
-          {THEMES.map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => onTheme(t)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: t === theme }}
-              style={{ flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 6, backgroundColor: t === theme ? c.bg : 'transparent' }}
-            >
-              <Text style={{ fontSize: 13, color: t === theme ? c.text : c.sub, fontWeight: t === theme ? '600' : '400' }}>{THEME_LABEL[t]}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <Umschalter werte={THEMES} label={THEME_LABEL} wert={theme} onWahl={onTheme} c={c} />
+        <Text style={titel}>Raster</Text>
+        <Umschalter werte={RASTER} label={{ 48: '48', 52: '52', 56: '56' }} wert={raster} onWahl={onRaster} c={c} />
         {[...new Set(eintraege.map((e) => e.abschnitt))].map((a) => (
           <Fragment key={a}>
             <Text style={titel}>{a}</Text>
@@ -73,5 +64,23 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, messze
         </View>
       </Animated.View>
     </Modal>
+  );
+}
+
+function Umschalter<T extends string>({ werte, label, wert, onWahl, c }: { werte: readonly T[]; label: Record<T, string>; wert: T; onWahl: (w: T) => void; c: Colors }) {
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: c.chip, borderRadius: 8, padding: 2, marginHorizontal: 16, marginVertical: 4 }}>
+      {werte.map((w) => (
+        <Pressable
+          key={w}
+          onPress={() => onWahl(w)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: w === wert }}
+          style={{ flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 6, backgroundColor: w === wert ? c.bg : 'transparent' }}
+        >
+          <Text style={{ fontSize: 13, color: w === wert ? c.text : c.sub, fontWeight: w === wert ? '600' : '400' }}>{label[w]}</Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }

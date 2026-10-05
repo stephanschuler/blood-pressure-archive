@@ -11,8 +11,8 @@ Stand: Oktober 2026. Anforderungen: [ANFORDERUNGEN.md](ANFORDERUNGEN.md).
 | Build              | lokal in Docker (`linux/amd64`-Container), kein Cloud-Build-Dienst    |
 | Test               | APK von Hand aufs Handy; nativer Android-Emulator auf dem Mac         |
 | Kamera / Import    | `expo-image-picker` (`exif: true`); ohne EXIF-Zeit gilt „jetzt"       |
-| Datenbank          | `expo-sqlite` mit Drizzle (Migrationen)                               |
-| Export             | CSV von Hand, XLSX mit SheetJS (CDN-Tarball) oder ExcelJS, SQLite per `VACUUM INTO` |
+| Datenbank          | `expo-sqlite`, synchron; Migrationen als SQL-Liste, Stand in `user_version` |
+| Export             | CSV und XLSX von Hand (`fflate` zippt), SQLite per `serializeSync()`  |
 | Teilen / Drive     | System-Share-Sheet (`expo-sharing`); direkte Drive-API erst bei Bedarf |
 | Texterkennung      | on-device, eigene Segment-Erkennung, ohne trainiertes Modell; **kein** Online-Dienst, **keine** generische OCR |
 
@@ -395,15 +395,17 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
 
 ### Datenbank
 
-`expo-sqlite` mit Drizzle. `drizzle-kit generate` erzeugt die Migrationen, `useMigrations` spielt
-sie beim App-Start ein.
+`expo-sqlite` mit der synchronen API. Schema und Abfragen stehen in `app/src/datenbank.ts` gegen
+eine schmale Schnittstelle `Sql`, damit die Tests sie mit `node:sqlite` prüfen. Migrationen sind
+eine Liste von SQL-Anweisungen, der Stand steht in `PRAGMA user_version`; `migrate()` spielt sie
+beim App-Start ein, je Migration eine Transaktion. Nur anhängen, nie ändern.
 
 ### Export und Cloud
 
-- **SQLite:** Kopie per `VACUUM INTO`, dann teilen.
+- **SQLite:** `serializeSync()` von expo-sqlite, in den gewählten Ordner geschrieben.
 - **CSV:** wenige Zeilen eigener Code.
-- **XLSX:** SheetJS vom CDN, nicht von npm (das npm-Paket `xlsx` 0.18.5 ist veraltet und hat CVEs),
-  alternativ ExcelJS.
+- **XLSX:** von Hand in `app/src/tabelle.ts`: OOXML-Teile als Text, gezippt mit `fflate`. Zwei
+  Blätter und zwei Zahlenformate brauchen keine Bibliothek.
 - **Android-Backup:** `allowBackup: true` in `app/app.json`, ausdrücklich gewählt (5.10.2026). Die
   Datenbank geht ins Google-Backup des Handys, sofern dort eingeschaltet; ab Android 9 mit
   Displaysperre Ende-zu-Ende-verschlüsselt. Ergänzt die Sicherung von Hand, ersetzt sie nicht.

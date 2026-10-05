@@ -42,7 +42,7 @@
 │        └ Antippen zum Bearbeiten …┘   │
 │                  …                    │
 ├──────────────────────────────────────┤
-│       (Importieren)   (Aufnehmen)     │  Knöpfe, unverändert
+│  (Von Hand) (Importieren) (Aufnehmen) │  Knöpfe
 └──────────────────────────────────────┘
 ```
 
@@ -131,6 +131,12 @@ sich wie dort antippen und ändern. Gleicht er nach dem Speichern einem anderen 
 Zeit, bleibt einer. Links stehen „Löschen“ mit Rückfrage und „Abbrechen“ (`close`), rechts
 „Speichern“; die Zurück-Taste bricht ebenfalls ab. Mehrere Messungen dürfen zugleich aufgeklappt
 sein. Zu Beginn ist keine aufgeklappt.
+
+### Knöpfe
+
+Von links: **Von Hand eintragen** (`edit`), Importieren, Aufnehmen; Aufnehmen bleibt rechts für den
+rechten Daumen. Von Hand öffnet die Werteingabe wie beim Bearbeiten, Kopf „Messpunkt eintragen“,
+Felder leer, Zeit „jetzt“ auf die volle Minute und änderbar; links nur „Abbrechen“.
 
 ### 9. Kurvenleiste
 

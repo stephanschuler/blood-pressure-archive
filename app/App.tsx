@@ -38,7 +38,8 @@ function Main() {
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
   const [menue, setMenue] = useState(false);
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
-  const [bearbeiten, setBearbeiten] = useState<Messpunkt | null>(null);
+  // 'neu': Eingabe von Hand, ohne Foto
+  const [bearbeiten, setBearbeiten] = useState<Messpunkt | 'neu' | null>(null);
   const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
 
   useEffect(() => {
@@ -149,14 +150,15 @@ function Main() {
   }
 
   if (bearbeiten) {
+    const punkt = bearbeiten === 'neu' ? undefined : bearbeiten;
     return (
       <View style={screen}>
         <Bearbeiten
-          key={bearbeiten.id}
-          punkt={bearbeiten}
-          onSave={(p) => { updateMesspunkt(bearbeiten.id, p); setBearbeiten(null); setMessungen(listMessungen()); }}
+          key={punkt?.id ?? 'neu'}
+          punkt={punkt}
+          onSave={(p) => { if (punkt) updateMesspunkt(punkt.id, p); else insertMesspunkt(p); setBearbeiten(null); setMessungen(listMessungen()); }}
           onCancel={() => setBearbeiten(null)}
-          onDelete={() => askDelete(bearbeiten)}
+          onDelete={punkt && (() => askDelete(punkt))}
           c={c}
         />
         <StatusBar style="auto" />
@@ -182,6 +184,7 @@ function Main() {
       <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
+        <IconButton label="Von Hand eintragen" icon={require('./assets/edit.png')} onPress={() => setBearbeiten('neu')} />
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
@@ -247,23 +250,22 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
   );
 }
 
+/** Ohne punkt: neuer Messpunkt von Hand, Zeit „jetzt" auf die volle Minute. */
 function Bearbeiten({ punkt, onSave, onCancel, onDelete, c }: {
-  punkt: Messpunkt; onSave: (p: Omit<Messpunkt, 'id'>) => void; onCancel: () => void; onDelete: () => void; c: Colors;
+  punkt?: Messpunkt; onSave: (p: Omit<Messpunkt, 'id'>) => void; onCancel: () => void; onDelete?: () => void; c: Colors;
 }) {
-  const [zeit, setZeit] = useState(() => new Date(punkt.zeit));
+  const [zeit, setZeit] = useState(() => (punkt ? new Date(punkt.zeit) : new Date(new Date().setSeconds(0, 0))));
+  const abbrechen: Knopf = { label: 'Abbrechen', icon: require('./assets/close.png'), onPress: onCancel };
   return (
     <Werteingabe
-      werte={[punkt.sys, punkt.dia, punkt.puls]}
+      werte={punkt ? [punkt.sys, punkt.dia, punkt.puls] : [null, null, null]}
       unsicher={[false, false, false]}
-      links={[
-        { label: 'Löschen', icon: require('./assets/delete.png'), onPress: onDelete },
-        { label: 'Abbrechen', icon: require('./assets/close.png'), onPress: onCancel },
-      ]}
+      links={onDelete ? [{ label: 'Löschen', icon: require('./assets/delete.png'), onPress: onDelete }, abbrechen] : [abbrechen]}
       onSave={(w) => onSave({ zeit: zeit.toISOString(), ...w })}
       c={c}
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Messpunkt bearbeiten</Text>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>{punkt ? 'Messpunkt bearbeiten' : 'Messpunkt eintragen'}</Text>
         <Zeit zeit={zeit} onChange={setZeit} c={c} />
       </View>
     </Werteingabe>

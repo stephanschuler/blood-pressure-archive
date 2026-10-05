@@ -189,11 +189,33 @@ function backButton() {
   return () => act(async () => { handlers[handlers.length - 1]?.({} as Parameters<BackHandlerFn>[0]); });
 }
 
-test('Importieren links, Aufnehmen rechts', async () => {
+test('von links: von Hand, Importieren, Aufnehmen', async () => {
   await render(<App />);
   // Treffer kommen in Darstellungsreihenfolge
-  const labels = screen.getAllByLabelText(/^Fotos? (importieren|aufnehmen)$/).map((n) => n.props.accessibilityLabel);
-  expect(labels).toEqual(['Fotos importieren', 'Foto aufnehmen']);
+  const labels = screen.getAllByLabelText(/^(Fotos? (importieren|aufnehmen)|Von Hand eintragen)$/).map((n) => n.props.accessibilityLabel);
+  expect(labels).toEqual(['Von Hand eintragen', 'Fotos importieren', 'Foto aufnehmen']);
+});
+
+test('von Hand eintragen: leere Felder, Zeit jetzt auf die volle Minute; Abbrechen trägt nichts ein', async () => {
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Von Hand eintragen'));
+  expect(screen.getByText('Messpunkt eintragen')).toBeOnTheScreen();
+  expect(screen.getByLabelText('Speichern')).toBeDisabled();
+  expect(screen.queryByLabelText('Löschen')).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '128');
+  await fireEvent.press(screen.getByLabelText('Abbrechen'));
+  expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
+
+  await fireEvent.press(screen.getByLabelText('Von Hand eintragen'));
+  expect(screen.getByLabelText('SYS').props.value).toBe('');
+  const vorher = new Date().setSeconds(0, 0);
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '128');
+  await fireEvent.changeText(screen.getByLabelText('DIA'), '85');
+  await fireEvent.changeText(screen.getByLabelText('PUL'), '64');
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  const [p] = db.listMessungen()[0].punkte;
+  expect(p).toMatchObject({ sys: 128, dia: 85, puls: 64 });
+  expect([vorher, vorher + 60_000]).toContain(Date.parse(p.zeit));
 });
 
 /** Rückfrage abfangen; liefert den Knopf mit diesem Text aus der letzten. */

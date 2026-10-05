@@ -15,6 +15,7 @@ png loader-viewfinder         384  384 loader-viewfinder.png
 # Knöpfe der Startseite: 3-fach für 32 dp
 png add-a-photo                96   96 add-a-photo.png
 png add-photo-alternate        96   96 add-photo-alternate.png
+png edit                       96   96 edit.png
 # Knöpfe der Prüfansicht: 3-fach für 32 dp
 png check                      96   96 check.png
 png delete                     96   96 delete.png

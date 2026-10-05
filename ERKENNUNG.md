@@ -579,6 +579,12 @@ liest eine leere Hunderterstelle als 1. Auf echten Fotos leistet das der hellste
 Weg 2 (Ränder) braucht keine Taste, liest aber mit dem festen Medisana-Raster; für andere Geräte
 fehlt ein Layout.
 
+**Zurückgestellt (5.10.2026):** kein Leser und kein Geräteprofil für die anderen Geräte. Rund acht
+Fotos, keins nach Dezember 2025: Sie gehen über den Import mit leeren Feldern oder „Von Hand
+eintragen“. Ein Profil ohne zweites Gerät legte die Naht nach Vermutung; ein Beurer-Leser hätte nur
+5 Fotos zum Einmessen. Wieder aufnehmen, wenn ein anderes Gerät dauerhaft in Gebrauch kommt: dann
+je Gerät Zellen und Weg zum Display, und der Archivtest weist die Quote je Gerät aus.
+
 ### Offen, nicht gemessen
 
 - **Skalierung im Handy gegen PIL:** Der Archivtest verkleinert mit PIL, die App mit

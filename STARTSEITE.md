@@ -30,16 +30,16 @@
 │ Oktober 2026                          │  Monatskopf, haftet
 │ KW 40 Ø Woche       139    82    73   │  Wochenzeile
 │ 28.09.–04.10. · 11   ▼8    •0    ▲2   │
-│ ┌──┐ › ◔ 07:59    123    84    67     │  Tag mit Kalenderblatt,
-│ │So│     2 Pkt.    ▼16   ▲2    ▼6     │  darin die Messungen
+│ ┌──┐ ◔ 07:59 (2)  123    84    67     │  Tag mit Kalenderblatt,
+│ │So│               ▼16   ▲2    ▼6     │  darin die Messungen
 │ │ 4│                                  │
 │ │Ok│                                  │
 │ └──┘                                  │
-│ ┌──┐ ⌄ ◕ 21:46    148    74    82     │  aufgeklappte Messung
-│ │Sa│     4 Pkt.    ▲9    ▼8    ▲9     │
-│ │ 3│   ┌ 21:46   150    72    86 ┐    │  Messpunkte
-│ └──┘   │ 21:47   145    77    81 │    │
-│        └ Antippen zum Bearbeiten …┘   │
+│ ┌──┐ ◕ 21:46 (4)  148    74    82     │  aufgeklappte Messung
+│ │Sa│               ▲9    ▼8    ▲9     │
+│ │ 3│ ┌ 21:46   150    72    86   ┐    │  Messpunkte
+│ └──┘ │ 21:47   145    77    81   │    │
+│      └ Antippen zum Bearbeiten …  ┘   │
 │                  …                    │
 ├──────────────────────────────────────┤
 │  (Von Hand) (Importieren) (Aufnehmen) │  Knöpfe
@@ -116,9 +116,8 @@ untereinander, neueste oben. Tage ohne Messung erscheinen nicht.
 
 Eine Zeile:
 
-- `›` als Hinweis zum Aufklappen, aufgeklappt um 90° gedreht
-- Symbol der Tageshälfte
-- Uhrzeit, darunter klein die Zahl der Messpunkte (`4 Pkt.`)
+- Symbol der Tageshälfte, Uhrzeit und dahinter die Zahl der Messpunkte in einer kleinen grauen Pille,
+  alle drei auf Höhe der Werte; ohne eigenen Aufklapp-Hinweis, die ganze Zeile klappt auf
 - SYS, DIA, PUL fett (18 dp), darunter je ein Pfeil gegen die vorige Messung derselben Tageshälfte,
   auch über Tage ohne Messung hinweg; auch unter „Beide“ Vormittag gegen Vormittag. Die erste Messung
   einer Tageshälfte hat keinen Pfeil.

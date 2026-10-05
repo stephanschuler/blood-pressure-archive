@@ -22,10 +22,13 @@ const p2 = (n: number) => String(n).padStart(2, '0');
 const datum = (d: Date) => `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.`;
 const uhr = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
 
-// Spaltenraster der Liste: Kalenderblatt, Abstand, Pfeil, Symbol, Uhrzeit; die Wertspalten teilen sich den Rest.
+// Spaltenraster der Liste: Kalenderblatt, Abstand, Symbol, Uhrzeit mit Punktzahl; die Wertspalten teilen sich den Rest.
 // Wochenzeile und Spaltenkopf richten sich danach aus.
 const BLATT = 36;
-const VOR_WERTEN = BLATT + 10 + 12 + 6 + 16 + 6 + 42;
+const ZEIT = 58;
+const VOR_WERTEN = BLATT + 10 + 16 + 6 + ZEIT;
+// Zeilenhöhe der fetten Werte: Symbol und Uhrzeit stehen auf ihrer Höhe
+const wertzeile = (groesse: number) => Math.round(groesse * 4 / 3);
 
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
@@ -310,7 +313,7 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
 function Wertspalten({ w, bezug, c, groesse = 18, strich }: { w: Werte; bezug: Werte | null; c: Colors; groesse?: number; strich?: boolean }) {
   return (['sys', 'dia', 'puls'] as const).map((k) => (
     <View key={k} style={{ flex: 1, alignItems: 'flex-end' }}>
-      <Text style={{ fontSize: groesse, fontWeight: '700', color: c.text }}>{w[k]}</Text>
+      <Text style={{ fontSize: groesse, lineHeight: wertzeile(groesse), fontWeight: '700', color: c.text }}>{w[k]}</Text>
       {bezug ? <Trend wert={w[k]} bezug={bezug[k]} c={c} /> : <Text style={{ fontSize: 11, color: c.sub }}>{strich ? '–' : ' '}</Text>}
     </View>
   ));
@@ -356,17 +359,18 @@ function Tageszeile({ tag, offen, markiert, onToggle, onEdit, onDelete, c }: Tag
           const auf = offen.has(m.punkte[0].id);
           return (
             <View key={m.punkte[0].id}>
-              <Pressable onPress={() => onToggle(m)} accessibilityRole="button" accessibilityState={{ expanded: auf }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
-                <Text style={{ width: 12, color: c.sub, fontSize: 20, lineHeight: 22, textAlign: 'center', transform: [{ rotate: auf ? '90deg' : '0deg' }] }}>›</Text>
-                <Tagesbogen haelfte={tageshaelfte(m)} c={c} />
-                <View style={{ width: 42 }}>
-                  <Text style={{ fontSize: 13, color: c.sub }}>{uhr(zeitpunkt(m))}</Text>
-                  <Text style={{ fontSize: 10, color: c.sub }}>{m.punkte.length} Pkt.</Text>
+              <Pressable onPress={() => onToggle(m)} accessibilityRole="button" accessibilityState={{ expanded: auf }} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 6 }}>
+                <View style={{ height: wertzeile(18), flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Tagesbogen haelfte={tageshaelfte(m)} c={c} />
+                  <View style={{ width: ZEIT, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Text style={{ fontSize: 13, color: c.sub }}>{uhr(zeitpunkt(m))}</Text>
+                    <Text accessibilityLabel={m.punkte.length === 1 ? '1 Messpunkt' : `${m.punkte.length} Messpunkte`} style={{ fontSize: 9, color: c.sub, backgroundColor: c.chip, borderRadius: 6, paddingHorizontal: 4, overflow: 'hidden' }}>{m.punkte.length}</Text>
+                  </View>
                 </View>
                 <Wertspalten w={m} bezug={tag.vorige[i]} c={c} />
               </Pressable>
               {auf && (
-                <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10, marginLeft: 18, marginBottom: 8 }}>
+                <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10, marginBottom: 8 }}>
                   {m.punkte.map((p) => (
                     <Pressable key={p.id} onPress={() => onEdit(p)} onLongPress={() => onDelete(p)} accessibilityLabel={`Messpunkt ${uhr(new Date(p.zeit))}, ${p.sys}/${p.dia}, Puls ${p.puls}`} style={{ flexDirection: 'row', gap: 6, paddingVertical: 5 }}>
                       <Text style={{ width: 40, fontSize: 13, color: c.sub }}>{uhr(new Date(p.zeit))}</Text>

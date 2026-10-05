@@ -86,7 +86,7 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   expect(screen.getByDisplayValue('128')).not.toHaveStyle({ backgroundColor: '#fff3b0' });
   expect(screen.queryByText(/^Zeitpunkt nicht im Foto/)).toBeNull();
   await fireEvent.press(screen.getByLabelText('Speichern'));
-  expect(await screen.findByText('1 Pkt.')).toBeOnTheScreen();
+  expect(await screen.findByLabelText('1 Messpunkt')).toBeOnTheScreen();
   expect(screen.getAllByText('128').length).toBeGreaterThan(0);
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
 });
@@ -135,7 +135,7 @@ test('Messpunkt lange drücken, Rückfrage bestätigen: gelöscht', async () => 
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   await render(<App />);
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   const punkt = screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/);
   await fireEvent(punkt, 'longPress');
   expect(alert).toHaveBeenCalledWith('Messpunkt löschen?', expect.any(String), expect.any(Array));
@@ -150,15 +150,15 @@ test('Umschalter Tageshälfte filtert die Liste und wird gespeichert; Messung kl
   db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 19).toISOString(), sys: 140, dia: 90, puls: 70 });
   db.insertMesspunkt({ zeit: new Date(2026, 0, 1, 19, 2).toISOString(), sys: 144, dia: 92, puls: 72 });
   await render(<App />);
-  expect(screen.getByText('1 Pkt.')).toBeOnTheScreen();
-  expect(screen.getByText('2 Pkt.')).toBeOnTheScreen();
+  expect(screen.getByLabelText('1 Messpunkt')).toBeOnTheScreen();
+  expect(screen.getByLabelText('2 Messpunkte')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Vormittag' }));
-  expect(screen.queryByText('2 Pkt.')).toBeNull();
+  expect(screen.queryByLabelText('2 Messpunkte')).toBeNull();
   expect(db.getSetting('tageshaelfte')).toBe('vormittag');
   await fireEvent.press(screen.getByRole('button', { name: 'Nachmittag' }));
-  expect(screen.queryByText('1 Pkt.')).toBeNull();
+  expect(screen.queryByLabelText('1 Messpunkt')).toBeNull();
   expect(screen.queryByLabelText(/^Messpunkt/)).toBeNull();
-  await fireEvent.press(screen.getByText('2 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('2 Messpunkte'));
   expect(screen.getAllByLabelText(/^Messpunkt/)).toHaveLength(2);
 });
 
@@ -270,7 +270,7 @@ test('Zeit ohne EXIF wählen: Datum, dann Uhrzeit auf die volle Minute; Hinweis 
 test('Bearbeiten ändert auch die Zeit', async () => {
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
   await render(<App />);
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
   await zeitWaehlen(new Date(2025, 11, 24), new Date(2025, 11, 24, 19, 30));
   await fireEvent.press(screen.getByLabelText('Speichern'));
@@ -297,20 +297,20 @@ test('Messpunkt antippen: bearbeiten und speichern; Zurück und Abbrechen breche
   const alert = rueckfrage();
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
   await render(<App />);
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
   expect(screen.getByText('Messpunkt bearbeiten')).toBeOnTheScreen();
   await fireEvent.changeText(screen.getByLabelText('SYS'), '999');
   await back();
   expect(db.listMessungen()[0].sys).toBe(130);
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
   await fireEvent.changeText(screen.getByLabelText('SYS'), '999');
   await fireEvent.press(screen.getByLabelText('Abbrechen'));
   expect(screen.queryByText('Messpunkt bearbeiten')).toBeNull();
   expect(db.listMessungen()[0].sys).toBe(130);
 
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
   await fireEvent.changeText(screen.getByLabelText('SYS'), '132');
   await fireEvent.press(screen.getByLabelText('Speichern'));
@@ -318,7 +318,7 @@ test('Messpunkt antippen: bearbeiten und speichern; Zurück und Abbrechen breche
   expect(db.listMessungen()[0].punkte[0].zeit).toBe('2026-01-01T07:00:00.000Z');
   expect(screen.queryByText('Messpunkt bearbeiten')).toBeNull();
 
-  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText('1 Messpunkt'));
   await fireEvent.press(screen.getByLabelText(/^Messpunkt .*132\/85, Puls 60$/));
   await fireEvent.press(screen.getByLabelText('Löschen'));
   expect(alert).toHaveBeenCalledWith('Messpunkt löschen?', expect.any(String), expect.any(Array));
@@ -574,7 +574,7 @@ test('Einspielen: neue Messpunkte übernommen, doppelte übersprungen, Sicherung
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Eingespielt', '2 Messpunkte gelesen, 1 neu übernommen.'));
   expect(db.zaehlen()).toBe(2);
   expect(globalThis.sicherung.closeSync).toHaveBeenCalled();
-  expect(screen.getAllByText('1 Pkt.')).toHaveLength(2);
+  expect(screen.getAllByLabelText('1 Messpunkt')).toHaveLength(2);
 });
 
 test('Einspielen: Abbruch, fremde Datei und Sicherung einer neueren Version', async () => {

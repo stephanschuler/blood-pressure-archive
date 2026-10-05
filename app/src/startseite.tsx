@@ -6,10 +6,9 @@ import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text,
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
-  AUSWAHL, filtern, gliedern, parseAuswahl, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
+  AUSWAHL, filtern, gliedern, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
   type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
-import { getSetting, setSetting } from './db';
 import type { Messpunkt, Messung } from './messung';
 import type { Colors } from './theme';
 
@@ -32,8 +31,9 @@ const LEISTE = 40;
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
 
-export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c: Colors; onDelete: (p: Messpunkt) => void }) {
-  const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
+export function Startseite({ messungen, auswahl, onAuswahl, c, onDelete }: {
+  messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors; onDelete: (p: Messpunkt) => void;
+}) {
   const [offen, setOffen] = useState(new Set<number>());
   const [markiert, setMarkiert] = useState<number | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
@@ -84,10 +84,6 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
         spaeter(() => setHinweis(null), 2800);
       },
     });
-  const waehlen = (a: Auswahl) => {
-    setSetting('tageshaelfte', a);
-    setAuswahl(a);
-  };
   const umschalten = (m: Messung) =>
     setOffen((o) => {
       const n = new Set(o);
@@ -102,7 +98,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
         {AUSWAHL.map((a) => (
           <Pressable
             key={a}
-            onPress={() => waehlen(a)}
+            onPress={() => onAuswahl(a)}
             accessibilityRole="button"
             accessibilityState={{ selected: a === auswahl }}
             style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4, paddingVertical: 6, borderRadius: 6, backgroundColor: a === auswahl ? c.bg : 'transparent' }}

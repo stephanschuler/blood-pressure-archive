@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { parseAuswahl, type Auswahl } from './src/auswertung';
 import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
 import { importPhotos, messzeit, takePhoto } from './src/foto';
@@ -30,6 +31,7 @@ function Main() {
   const insets = useSafeAreaInsets();
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
+  const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
   const [menue, setMenue] = useState(false);
   const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
 
@@ -47,6 +49,10 @@ function Main() {
     setSetting('theme', t);
     Appearance.setColorScheme(t);
     setTheme(t);
+  };
+  const waehleAuswahl = (a: Auswahl) => {
+    setSetting('tageshaelfte', a);
+    setAuswahl(a);
   };
 
   const askDelete = (p: Messpunkt) =>
@@ -126,7 +132,7 @@ function Main() {
         </Pressable>
         <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
       </View>
-      <Startseite messungen={messungen} c={c} onDelete={askDelete} />
+      <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />

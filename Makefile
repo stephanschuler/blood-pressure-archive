@@ -9,7 +9,7 @@ PARTS   := 12
 LAN_IP  ?= $(shell ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
 export LAN_IP
 
-.PHONY: help images install icons apk serve-apk lan-ip typecheck test test-archiv klein hermes
+.PHONY: help images install icons signatur apk serve-apk lan-ip typecheck test test-archiv klein hermes
 
 help: ## Befehle anzeigen
 	@awk -F':.*## ' '/^[a-z-]+:.*## / { printf "  make %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -22,6 +22,12 @@ install: ## npm-Abhängigkeiten der App installieren
 
 icons: ## App-Icons und Ladeanimation aus app/assets/svg/ als PNG erzeugen
 	$(COMPOSE) run --rm svg sh /work/buildenv/icons.sh
+
+signatur: ## Release-Schlüssel einmalig anlegen (~/.config/blutdruck); mitsichern: ohne ihn kein Update
+	$(ANDROID) sh -c 'test ! -e /signatur/release.keystore || { echo "Schlüssel existiert schon"; exit 1; }; \
+	  head -c 24 /dev/urandom | base64 > /signatur/passwort && chmod 600 /signatur/passwort \
+	  && keytool -genkeypair -keystore /signatur/release.keystore -storetype PKCS12 -storepass:file /signatur/passwort \
+	       -alias release -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Blood Pressure Archive"'
 
 apk: ## Release-APK bauen: app/dist/blutdruck-<version>-<hash>.apk
 	$(COMPOSE) run --rm -e GIT_HASH=$$(git rev-parse --short HEAD) android /work/buildenv/build-apk.sh

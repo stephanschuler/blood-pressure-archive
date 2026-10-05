@@ -11,6 +11,7 @@ services:
       - gradle:/root/.gradle
       - npm:/root/.npm
       - build:/build
+      - ${SIGNATUR:-~/.config/blutdruck}:/signatur
 
   # Tests, Typprüfung, Messlauf in TypeScript: natives Node, ohne Emulation.
   node:

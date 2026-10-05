@@ -41,6 +41,7 @@ Containern. `make help` listet alle Befehle.
 make images      # Docker-Images bauen
 make install     # npm-Abhängigkeiten installieren
 make test        # Typprüfung, Unit- und Oberflächentests
+make signatur    # einmalig: Release-Schlüssel nach ~/.config/blutdruck, mitsichern
 make apk         # Release-APK nach app/dist/blutdruck-<version>-<hash>.apk
 make serve-apk   # APK im WLAN anbieten, zum Installieren auf dem Handy
 ```

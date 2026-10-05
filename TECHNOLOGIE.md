@@ -65,6 +65,13 @@ sprechen die Entwicklungsschleife ohne adb (s. u.), `react-native-fast-tflite` u
   `Cache-Control: no-cache` und `?v=`-Parameter die alte APK aus dem Cache, sobald sie über die
   Dateiliste geöffnet wurde; das Zugriffsprotokoll zeigte keinen Abruf. Ein neuer Name je Build
   umgeht jeden Cache.
+- **Eigener Release-Schlüssel** in `~/.config/blutdruck/` (`release.keystore`, `passwort`),
+  einmalig angelegt mit `make signatur`, überschreibbar mit `SIGNATUR=…`. `build-apk.sh` signiert
+  das Gradle-Ergebnis mit `apksigner` neu; Gradle selbst nimmt den `debug.keystore` der
+  Expo-Vorlage, der öffentlich ist. Android installiert ein Update nur mit demselben Schlüssel:
+  **Schlüssel mitsichern,** sonst geht das nächste Update nur über Deinstallieren, und das löscht
+  die Datenbank. Der Wechsel vom Debug-Schlüssel (5.10.2026) verlangte das einmal: vorher
+  Datensicherung speichern, danach einspielen.
 - Welche APK installiert ist, zeigt *Einstellungen → Apps → Blood Pressure Archive → Version*.
 - USB-Kopie bräuchte auf dem Mac ein MTP-Programm (z. B. OpenMTP).
 - Jede Änderung kostet so einen Build: gut für Zwischenstände, zu zäh für die tägliche Entwicklung.

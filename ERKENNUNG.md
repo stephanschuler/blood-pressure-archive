@@ -537,6 +537,7 @@ Messrichtung quer dazu fest.
 |---------|--------|-------|
 | `make test` → `app/tests/image.test.ts` | JPEG-Rundlauf: Maße, RGB, Farben; Hülle und kleinstes Rechteck eines gedrehten Rechtecks; Douglas-Peucker ergibt 4 Ecken; Schließen; HSV wie OpenCV; Perspektive exakt, Entzerrung trifft das Viereck | künstlich |
 | `make test` → `app/tests/segments.test.ts` | gezeichnetes Display mit hellen Geistersegmenten wird richtig gelesen; Geistersegment knapp an der Schwelle macht das Pulsfeld bei `margin 0,2` unsicher; Plausibilität inkl. SYS − DIA < 15 | künstlich |
+| `make test` → `app/tests/messwerte.test.ts` | künstliche Szene: beide Wege lesen dasselbe; Ränder allein, auch gedreht; Widerspruch → keiner; ohne Gerät nichts | künstlich |
 | `make test` → `app/tests-ui/App.test.tsx` | Oberfläche, `recognize()` als Attrappe | künstlich |
 | `make test` → `app/tests-ui/foto.test.ts` | `recognize()`: höchstens drei zugleich, Verkleinern nacheinander, Runtime frei nach Fehler; Runtime und Manipulator als Attrappe | künstlich |
 | `make test-archiv` | 1.510 Fotos, Grenzwerte ≥ 87,0 % gelesen, ≤ 4 unmarkiert falsch; Vergleich mit Python, wenn `referenz.csv` vorliegt | lokal, `daten/` |

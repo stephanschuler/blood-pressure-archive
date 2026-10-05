@@ -321,7 +321,7 @@ function Wochenzeile({ w, c }: { w: Woche; c: Colors }) {
 
 function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
   return (
-    <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: c.chip, alignItems: 'stretch', marginTop: 3 }}>
+    <View style={{ width: BLATT, borderRadius: 8, overflow: 'hidden', backgroundColor: c.chip, alignItems: 'stretch', alignSelf: 'flex-start', marginTop: 3 }}>
       <Text style={{ backgroundColor: ROT, color: '#fff', fontSize: 9, textAlign: 'center' }}>{WOCHENTAG[d.getDay()]}</Text>
       <Text style={{ fontSize: 15, fontWeight: '700', color: c.text, textAlign: 'center' }}>{d.getDate()}</Text>
       <Text style={{ fontSize: 9, color: c.sub, textAlign: 'center', paddingBottom: 1 }}>{MONAT[d.getMonth()]}</Text>

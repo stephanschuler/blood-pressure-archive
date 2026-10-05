@@ -116,8 +116,6 @@ test('Messpunkt lange drücken, Rückfrage bestätigen: gelöscht', async () => 
   await fireEvent(punkt, 'longPress');
   expect(alert).toHaveBeenCalledWith('Messpunkt löschen?', expect.any(String), expect.any(Array));
   const loeschen = alert.mock.calls[0][2]!.find((b) => b.text === 'Löschen')!;
-  await fireEvent.press(punkt); // kurzes Tippen löscht nicht
-  expect(db.listMessungen()).toHaveLength(1);
   await act(async () => loeschen.onPress!());
   expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(db.listMessungen()).toEqual([]);
@@ -174,17 +172,71 @@ test('Importieren links, Aufnehmen rechts', async () => {
   expect(labels).toEqual(['Fotos importieren', 'Foto aufnehmen']);
 });
 
-test('Zurück-Taste in der Bestätigung verwirft das Foto', async () => {
+/** Rückfrage abfangen; liefert den Knopf mit diesem Text aus der letzten. */
+function rueckfrage() {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  return Object.assign(alert, { knopf: (text: string) => alert.mock.calls.at(-1)![2]!.find((b) => b.text === text)! });
+}
+
+test('Zurück-Taste bei einer Aufnahme fragt nach; Abbrechen behält sie, Verwerfen löscht sie', async () => {
   const back = backButton();
+  const alert = rueckfrage();
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   await screen.findByDisplayValue('128');
   await back();
+  expect(alert).toHaveBeenCalledWith('Aufnahme verwerfen?', expect.any(String), expect.any(Array));
+  expect(screen.getByDisplayValue('128')).toBeOnTheScreen();
+  expect(foto.discard).not.toHaveBeenCalled();
+  await act(async () => alert.knopf('Verwerfen').onPress!());
   expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
   expect(db.listMessungen()).toEqual([]);
+});
+
+test('Zurück-Taste bei einem Foto aus der Galerie verwirft ohne Rückfrage', async () => {
+  const back = backButton();
+  const alert = rueckfrage();
+  const galerie = { ...FOTO, zeitAusExif: true, temporaer: false };
+  foto.importPhotos.mockResolvedValue([galerie]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByDisplayValue('128');
+  await back();
+  expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
+  expect(alert).not.toHaveBeenCalled();
+  expect(foto.discard).toHaveBeenCalledWith(galerie);
+});
+
+test('Messpunkt antippen: bearbeiten und speichern; Zurück bricht ab; Löschen fragt nach', async () => {
+  const back = backButton();
+  const alert = rueckfrage();
+  db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
+  await render(<App />);
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
+  expect(screen.getByText('Messpunkt bearbeiten')).toBeOnTheScreen();
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '999');
+  await back();
+  expect(db.listMessungen()[0].sys).toBe(130);
+
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '132');
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  expect(db.listMessungen().map((m) => [m.sys, m.dia, m.puls])).toEqual([[132, 85, 60]]);
+  expect(db.listMessungen()[0].punkte[0].zeit).toBe('2026-01-01T07:00:00.000Z');
+  expect(screen.queryByText('Messpunkt bearbeiten')).toBeNull();
+
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText(/^Messpunkt .*132\/85, Puls 60$/));
+  await fireEvent.press(screen.getByLabelText('Löschen'));
+  expect(alert).toHaveBeenCalledWith('Messpunkt löschen?', expect.any(String), expect.any(Array));
+  await act(async () => alert.knopf('Löschen').onPress!());
+  expect(await screen.findByText('Noch keine Messungen.')).toBeOnTheScreen();
 });
 
 test('mehrere Fotos: alle werden erkannt, ohne auf die Entscheidung zu warten', async () => {
@@ -232,7 +284,9 @@ test('Zurück-Taste während der Erkennung: verworfen, spätes Ergebnis öffnet 
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
   expect(await screen.findByText('Erkenne …')).toBeOnTheScreen();
+  const alert = rueckfrage();
   await back();
+  await act(async () => alert.knopf('Verwerfen').onPress!());
   await act(async () => finish({ values: [128, 85, 64], uncertain: [false, false, false] }));
   expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();
   expect(screen.queryByDisplayValue('128')).toBeNull();

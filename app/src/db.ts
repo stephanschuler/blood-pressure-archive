@@ -10,6 +10,7 @@ const db = openDatabaseSync('blutdruck.db');
 export const migrate = () => d.migrate(db);
 export const insertMesspunkt = (p: Omit<Messpunkt, 'id'>) => d.insertMesspunkt(db, p);
 export const hasMesspunkt = (p: Omit<Messpunkt, 'id'>) => d.hasMesspunkt(db, p);
+export const updateMesspunkt = (id: number, w: Pick<Messpunkt, 'sys' | 'dia' | 'puls'>) => d.updateMesspunkt(db, id, w);
 export const deleteMesspunkt = (id: number) => d.deleteMesspunkt(db, id);
 export const listMessungen = () => d.listMessungen(db);
 export const getSetting = (key: string) => d.getSetting(db, key);

@@ -5,7 +5,8 @@ Vorlage ist der Entwurf „A Basis“ aus Runde 2 auf der Design-Leinwand
 Entwurf 04, den Fortschrittsbalken aus 22 und die Tastatur aus 18.
 
 Umgesetzt in `Bestaetigung` (`app/App.tsx`): die Ansicht, die nach der Erkennung je Foto
-erscheint, bevor ein Messpunkt gespeichert oder das Foto verworfen wird.
+erscheint, bevor ein Messpunkt gespeichert oder das Foto verworfen wird. Felder und Knöpfe
+(`Werteingabe`) teilt sie mit dem Bearbeiten eines Messpunkts.
 
 ## Ziel
 
@@ -122,6 +123,11 @@ in Tastaturhöhe an und scrollt das fokussierte Feld 8 dp über die Tastatur.
 
 Unverändert: Verwerfen links, Speichern rechts, Speichern gesperrt, solange ein Feld ungültig ist.
 Bei offener Tastatur liegen sie unter ihr: erreichbar durch Scrollen, Speichern auch über „Weiter“.
+
+**Zurück-Taste** verwirft wie „Verwerfen“. Bei einer Aufnahme aus der App fragt sie vorher nach
+(„Aufnahme verwerfen?“), auch während der Erkennung: Das Foto wird danach gelöscht, ein
+versehentliches Zurück verlöre die Messung. Fotos aus der Galerie bleiben dort und gehen ohne
+Rückfrage.
 
 ## Farben
 

@@ -49,6 +49,11 @@ export function hasMesspunkt(db: Sql, p: Omit<Messpunkt, 'id'>): boolean {
   return db.getFirstSync('SELECT 1 FROM messpunkt WHERE zeit = ? AND sys = ? AND dia = ? AND puls = ?', p.zeit, p.sys, p.dia, p.puls) !== null;
 }
 
+/** Gleicht er danach einem anderen Messpunkt derselben Zeit, bleibt nur einer. */
+export function updateMesspunkt(db: Sql, id: number, w: Pick<Messpunkt, 'sys' | 'dia' | 'puls'>) {
+  db.runSync('UPDATE OR REPLACE messpunkt SET sys = ?, dia = ?, puls = ? WHERE id = ?', w.sys, w.dia, w.puls, id);
+}
+
 export function deleteMesspunkt(db: Sql, id: number) {
   db.runSync('DELETE FROM messpunkt WHERE id = ?', id);
 }

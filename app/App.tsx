@@ -1,11 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { parseAuswahl, type Auswahl } from './src/auswertung';
-import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, zaehlen, type Messung } from './src/db';
+import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, updateMesspunkt, zaehlen, type Messung } from './src/db';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
+import type { Values } from './src/erkennung/segments';
 import { importPhotos, messzeit, takePhoto } from './src/foto';
 import type { Messpunkt } from './src/messung';
 import { useQueue, type Offen } from './src/queue';
@@ -36,17 +37,25 @@ function Main() {
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
   const [menue, setMenue] = useState(false);
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
+  const [bearbeiten, setBearbeiten] = useState<Messpunkt | null>(null);
   const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
 
-  // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
+  // Android-Zurück-Taste schließt die Ansicht, statt die App zu beenden; bei einer Aufnahme erst nach
+  // Rückfrage, das Foto wird danach gelöscht
   useEffect(() => {
-    if (!offen) return;
+    if (!offen && !bearbeiten) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      next();
+      if (bearbeiten) setBearbeiten(null);
+      else if (offen!.foto.temporaer) {
+        Alert.alert('Aufnahme verwerfen?', 'Das Foto wird gelöscht, die Werte werden nicht gespeichert.', [
+          { text: 'Abbrechen', style: 'cancel' },
+          { text: 'Verwerfen', style: 'destructive', onPress: next },
+        ]);
+      } else next();
       return true;
     });
     return () => sub.remove();
-  }, [offen]);
+  }, [offen, bearbeiten]);
 
   const waehleTheme = (t: Theme) => {
     setSetting('theme', t);
@@ -61,7 +70,7 @@ function Main() {
   const askDelete = (p: Messpunkt) =>
     Alert.alert('Messpunkt löschen?', `${p.sys}/${p.dia}, Puls ${p.puls}\n${new Date(p.zeit).toLocaleString('de-DE')}`, [
       { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Löschen', style: 'destructive', onPress: () => { deleteMesspunkt(p.id); setMessungen(listMessungen()); } },
+      { text: 'Löschen', style: 'destructive', onPress: () => { deleteMesspunkt(p.id); setBearbeiten(null); setMessungen(listMessungen()); } },
     ]);
 
   // jeder Fehler sichtbar: sonst verlässt sich der Nutzer auf eine Sicherung, die es nicht gibt
@@ -134,6 +143,21 @@ function Main() {
     );
   }
 
+  if (bearbeiten) {
+    return (
+      <View style={screen}>
+        <Bearbeiten
+          key={bearbeiten.id}
+          punkt={bearbeiten}
+          onSave={(w) => { updateMesspunkt(bearbeiten.id, w); setBearbeiten(null); setMessungen(listMessungen()); }}
+          onDelete={() => askDelete(bearbeiten)}
+          c={c}
+        />
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+
   return (
     <View style={screen}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -149,7 +173,7 @@ function Main() {
           </Text>
         </Pressable>
       )}
-      <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onDelete={askDelete} />
+      <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
@@ -161,9 +185,54 @@ function Main() {
   );
 }
 
+type Werte = Pick<Messpunkt, 'sys' | 'dia' | 'puls'>;
+
+const zeitpunkt = (d: Date) => d.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
 function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; nr: number; gesamt: number; bereit: number; onDone: () => void; c: Colors }) {
   const { foto, reading } = offen;
-  const [werte, setWerte] = useState(reading!.values.map((v) => (v === null ? '' : String(v))));
+  return (
+    <Werteingabe
+      werte={reading!.values}
+      unsicher={reading!.uncertain}
+      bild={foto.uri}
+      links={{ label: 'Verwerfen', onPress: onDone }}
+      onSave={(w) => { insertMesspunkt({ zeit: foto.zeit.toISOString(), ...w }); onDone(); }}
+      c={c}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
+        <Text style={{ color: c.sub }}>{zeitpunkt(foto.zeit)}</Text>
+      </View>
+      {!foto.zeitAusExif && (
+        <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
+          Zeitpunkt nicht im Foto, jetzt angenommen
+        </Text>
+      )}
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
+        <View testID="erkannt" style={{ position: 'absolute', width: `${(100 * (nr - 1 + bereit)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: c.erkannt }} />
+        <View testID="bestaetigt" style={{ position: 'absolute', width: `${(100 * (nr - 1)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
+      </View>
+    </Werteingabe>
+  );
+}
+
+// Abbrechen ist die Zurück-Taste (Main): für einen eigenen Knopf fehlt ein Symbol
+function Bearbeiten({ punkt, onSave, onDelete, c }: { punkt: Messpunkt; onSave: (w: Werte) => void; onDelete: () => void; c: Colors }) {
+  return (
+    <Werteingabe werte={[punkt.sys, punkt.dia, punkt.puls]} unsicher={[false, false, false]} links={{ label: 'Löschen', onPress: onDelete }} onSave={onSave} c={c}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Messpunkt bearbeiten</Text>
+        <Text style={{ color: c.sub }}>{zeitpunkt(new Date(punkt.zeit))}</Text>
+      </View>
+    </Werteingabe>
+  );
+}
+
+function Werteingabe({ werte: anfang, unsicher, bild, links, onSave, c, children }: {
+  werte: Values; unsicher: boolean[]; bild?: string; links: { label: string; onPress: () => void }; onSave: (w: Werte) => void; c: Colors; children: ReactNode;
+}) {
+  const [werte, setWerte] = useState(anfang.map((v) => (v === null ? '' : String(v))));
   const [fokus, setFokus] = useState<number | null>(null);
   const felder = useRef<(TextInput | null)[]>([]);
   const scroll = useRef<ScrollView>(null);
@@ -173,12 +242,9 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
   const tastaturOben = useRef<number | null>(null);
   const zahlen = werte.map((w) => (/^\d{2,3}$/.test(w) ? Number(w) : null));
   const gueltig = zahlen.every((z) => z !== null);
-  const markiert = zahlen.map((z, i) => reading!.uncertain[i] || z === null);
+  const markiert = zahlen.map((z, i) => unsicher[i] || z === null);
 
-  const speichern = () => {
-    insertMesspunkt({ zeit: foto.zeit.toISOString(), sys: zahlen[0]!, dia: zahlen[1]!, puls: zahlen[2]! });
-    onDone();
-  };
+  const speichern = () => onSave({ sys: zahlen[0]!, dia: zahlen[1]!, puls: zahlen[2]! });
 
   const weiter = (i: number) => {
     const unten = markiert.findIndex((m, j) => m && j > i);
@@ -219,22 +285,8 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
       onContentSizeChange={() => fokus !== null && ausrichten(fokus)}
     >
       <View ref={inhalt} style={{ height: hoehe }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
-          <Text style={{ color: c.sub }}>
-            {foto.zeit.toLocaleString('de-DE', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-        {!foto.zeitAusExif && (
-          <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
-            Zeitpunkt nicht im Foto, jetzt angenommen
-          </Text>
-        )}
-        <View style={{ height: 4, borderRadius: 2, backgroundColor: c.photo, marginVertical: 8 }}>
-          <View testID="erkannt" style={{ position: 'absolute', width: `${(100 * (nr - 1 + bereit)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: c.erkannt }} />
-          <View testID="bestaetigt" style={{ position: 'absolute', width: `${(100 * (nr - 1)) / gesamt}%`, height: 4, borderRadius: 2, backgroundColor: '#E53946' }} />
-        </View>
-        <Image source={{ uri: foto.uri }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" />
+        {children}
+        {bild ? <Image source={{ uri: bild }} style={{ width: '100%', flex: 1, backgroundColor: c.photo }} resizeMode="contain" /> : <View style={{ flex: 1 }} />}
         <View style={{ borderWidth: 2, borderColor: c.text, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 12 }}>
           {['SYS', 'DIA', 'PUL'].map((label, i) => (
             <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderColor: c.line }}>
@@ -263,7 +315,7 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
-          <IconButton label="Verwerfen" icon={require('./assets/delete.png')} onPress={onDone} />
+          <IconButton label={links.label} icon={require('./assets/delete.png')} onPress={links.onPress} />
           <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />
         </View>
       </View>

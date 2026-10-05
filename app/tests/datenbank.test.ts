@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { MIGRATIONS, deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, zaehlen } from '../src/datenbank';
+import { MIGRATIONS, deleteMesspunkt, einspielen, getSetting, hasMesspunkt, insertMesspunkt, listMessungen, migrate, setSetting, updateMesspunkt, zaehlen } from '../src/datenbank';
 import { memoryDb } from './sqlite';
 
 const version = (db: ReturnType<typeof memoryDb>) => db.getFirstSync<{ user_version: number }>('PRAGMA user_version')!.user_version;
@@ -31,6 +31,19 @@ test('derselbe Messpunkt wird nur einmal gespeichert', () => {
   assert.equal(hasMesspunkt(db, p), true);
   assert.equal(hasMesspunkt(db, { ...p, zeit: '2026-01-01T07:00:01.000Z' }), false);
   assert.deepEqual(listMessungen(db)[0].punkte.map((x) => x.puls), [60, 61]);
+});
+
+test('Messpunkt bearbeiten: Werte ändern sich, Zeit bleibt; gleicht er einem anderen, bleibt einer', () => {
+  const db = memoryDb();
+  migrate(db);
+  const zeit = '2026-01-01T07:00:00.000Z';
+  insertMesspunkt(db, { zeit, sys: 130, dia: 85, puls: 60 });
+  insertMesspunkt(db, { zeit, sys: 180, dia: 85, puls: 60 });
+  const [a, b] = listMessungen(db)[0].punkte;
+  updateMesspunkt(db, b.id, { sys: 131, dia: 86, puls: 61 });
+  assert.deepEqual(listMessungen(db)[0].punkte.map((p) => [p.zeit, p.sys, p.dia, p.puls]), [[zeit, 130, 85, 60], [zeit, 131, 86, 61]]);
+  updateMesspunkt(db, b.id, { sys: a.sys, dia: a.dia, puls: a.puls });
+  assert.equal(zaehlen(db), 1);
 });
 
 test('Datenbank im Stand der ersten App-Version wird ohne Verlust migriert', () => {

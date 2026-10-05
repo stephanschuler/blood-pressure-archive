@@ -39,7 +39,7 @@
 │ │Sa│     4 Pkt.    ▲9    ▼8    ▲9     │
 │ │ 3│   ┌ 21:46   150    72    86 ┐    │  Messpunkte
 │ └──┘   │ 21:47   145    77    81 │    │
-│        └ Messpunkt lange drücken …┘   │
+│        └ Antippen zum Bearbeiten …┘   │
 │                  …                    │
 ├──────────────────────────────────────┤
 │       (Importieren)   (Aufnehmen)     │  Knöpfe, unverändert
@@ -124,8 +124,11 @@ Eine Zeile:
   einer Tageshälfte hat keinen Pfeil.
 
 **Antippen** klappt die Messpunkte auf: grauer Kasten, je Messpunkt Uhrzeit, SYS, DIA, PUL, darunter
-der Hinweis „Messpunkt lange drücken zum Löschen“. **Langes Drücken** auf einen Messpunkt fragt wie
-bisher nach und löscht ihn. Mehrere Messungen dürfen zugleich aufgeklappt sein. Zu Beginn ist keine
+der Hinweis „Antippen zum Bearbeiten, lange drücken zum Löschen“. **Langes Drücken** auf einen
+Messpunkt fragt nach und löscht ihn. **Antippen** öffnet ihn in der Werteingabe der
+Prüfansicht, ohne Foto und Fortschritt, Kopf „Messpunkt bearbeiten“ mit seiner Zeit. Speichern
+ändert die drei Werte, die Zeit bleibt; gleicht er danach einem anderen Messpunkt derselben Zeit,
+bleibt einer. Links steht „Löschen“ mit Rückfrage, die Zurück-Taste bricht ab. Mehrere Messungen dürfen zugleich aufgeklappt sein. Zu Beginn ist keine
 aufgeklappt.
 
 ### 9. Kurvenleiste

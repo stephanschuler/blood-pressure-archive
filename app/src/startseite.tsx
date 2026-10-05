@@ -31,8 +31,8 @@ const LEISTE = 40;
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
 
-export function Startseite({ messungen, auswahl, onAuswahl, c, onDelete }: {
-  messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors; onDelete: (p: Messpunkt) => void;
+export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete }: {
+  messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void;
 }) {
   const [offen, setOffen] = useState(new Set<number>());
   const [markiert, setMarkiert] = useState<number | null>(null);
@@ -149,7 +149,7 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onDelete }: {
           renderItem={({ item }) =>
             item.art === 'woche'
               ? <Wochenzeile w={item} c={c} />
-              : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onDelete={onDelete} c={c} />}
+              : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
         {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} c={c} />}
@@ -325,9 +325,9 @@ function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
   );
 }
 
-type TagProps = { tag: Tag; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onDelete: (p: Messpunkt) => void; c: Colors };
+type TagProps = { tag: Tag; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void; c: Colors };
 
-function Tageszeile({ tag, offen, markiert, onToggle, onDelete, c }: TagProps) {
+function Tageszeile({ tag, offen, markiert, onToggle, onEdit, onDelete, c }: TagProps) {
   const leuchten = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!markiert) return;
@@ -355,12 +355,12 @@ function Tageszeile({ tag, offen, markiert, onToggle, onDelete, c }: TagProps) {
               {auf && (
                 <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10, marginLeft: 18, marginBottom: 8 }}>
                   {m.punkte.map((p) => (
-                    <Pressable key={p.id} onLongPress={() => onDelete(p)} accessibilityLabel={`Messpunkt ${uhr(new Date(p.zeit))}, ${p.sys}/${p.dia}, Puls ${p.puls}`} style={{ flexDirection: 'row', gap: 6, paddingVertical: 5 }}>
+                    <Pressable key={p.id} onPress={() => onEdit(p)} onLongPress={() => onDelete(p)} accessibilityLabel={`Messpunkt ${uhr(new Date(p.zeit))}, ${p.sys}/${p.dia}, Puls ${p.puls}`} style={{ flexDirection: 'row', gap: 6, paddingVertical: 5 }}>
                       <Text style={{ width: 40, fontSize: 13, color: c.sub }}>{uhr(new Date(p.zeit))}</Text>
                       {[p.sys, p.dia, p.puls].map((v, i) => <Text key={i} style={{ flex: 1, textAlign: 'right', fontSize: 14, color: c.text }}>{v}</Text>)}
                     </Pressable>
                   ))}
-                  <Text style={{ fontSize: 11, color: c.sub, paddingTop: 2, paddingBottom: 6 }}>Messpunkt lange drücken zum Löschen</Text>
+                  <Text style={{ fontSize: 11, color: c.sub, paddingTop: 2, paddingBottom: 6 }}>Antippen zum Bearbeiten, lange drücken zum Löschen</Text>
                 </View>
               )}
             </View>

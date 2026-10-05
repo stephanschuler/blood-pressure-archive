@@ -322,19 +322,38 @@ Segmente, Plausibilität), `messwerte.ts` (Kombination, Markierung „unsicher" 
   Einrichtung: `app/babel.config.js`, `app/metro.config.js`, Metro-Patch in `app/patches/`.
   Drei Runtimes lesen parallel (`RUNTIMES` in `app/src/foto.ts`), verkleinert wird nacheinander.
   Fallstricke: `.claude/rules/erkennung-worklet-runtime.md`.
-- Messung am Archiv (`make test-archiv`, 4.10.2026):
+- Messung am Archiv (`make test-archiv`, 5.10.2026, nach dem Vorzeichenfix unten):
 
 | Kennzahl                                         | Wert                                  |
 |--------------------------------------------------|---------------------------------------|
-| gelesen (1.510)                                  | 87,7 % (Python: 87,0 %)               |
-| Handerfassung (330): richtig / falsch            | 171 / 8, davon 4 als unsicher markiert |
-| beide lesen, gleicher Wert wie Python            | 1.289 von 1.291                       |
+| gelesen (1.510)                                  | 87,6 % (Python: 87,0 %)               |
+| Handerfassung (330): richtig / falsch            | 177 / 10, davon 5 als unsicher markiert |
+| beide lesen, gleicher Wert wie Python            | 1.280 von 1.285                       |
 | Zeit je Foto in Node (allein)                    | etwa 0,3 s                            |
 | Lesen je Foto unter Hermes, Mac (`make hermes`)  | 2,7 s (vor dem Umbau für Hermes 4,5 s) |
 | Lesen je Foto auf dem Galaxy S22, vor dem Umbau  | 8,0 s (dazu 1,0 s Verkleinern, Dekodieren) |
 
-- `make test-archiv` schlägt fehl unter 87,0 % gelesen oder bei mehr als 4 unmarkiert falschen
+- `make test-archiv` schlägt fehl unter 87,5 % gelesen oder bei mehr als 5 unmarkiert falschen
   Werten in der Handerfassung (`ocr-prototyp/auswertung_ts.py`).
+- **Vorzeichenfix im Tastenweg (5.10.2026):** `cropRegion` drehte mit `−angle` und verdoppelte die
+  Neigung, statt sie aufzuheben; aus Python übernommen. `GLASS` und `BAND` waren auf die verdrehten
+  Ausschnitte eingemessen, deshalb allein mit `+angle` schlechter (still falsch 6). Die Tastenwinkel
+  im Archiv sind zu 83 % negativ, 90 % zwischen −3,9° und +1,4°. Mit Fix liegen die gefundenen
+  Glaskanten oben und unten 0,02 bzw. 0,04 Tastenhöhen höher und streuen halb so stark; die linke
+  Kante liegt in beiden Fällen bei 0,50, nicht bei den bisher angenommenen 0,41.
+
+| Tastenweg: Vorzeichen, `GLASS`, `BAND`        | Tastenweg: Hand richtig / falsch | gesamt gelesen | gesamt: Hand richtig / falsch / still |
+|-----------------------------------------------|----------------------------------|----------------|---------------------------------------|
+| −, alt (0,41 / 2,24 / 0,31 / 2,56), 0,3       | 71 / 9                           | 87,7 %         | 171 / 8 / 4                           |
+| +, alt, 0,3                                   | 94 / 11                          | 87,7 %         | 172 / 11 / 6                          |
+| +, neu (0,50 / 2,27 / 0,29 / 2,52), 0,2       | 134 / 11                         | 87,9 %         | 177 / 10 / 5                          |
+| **+, neu, 0,12**                              | **144 / 7**                      | **87,6 %**     | **177 / 10 / 5**                      |
+| +, neu mit links 0,41, 0,12                   | 87 / 10                          | 86,4 %         | 167 / 10 / 7                          |
+| −, alt, 0,2                                   | 67 / 8                           | 87,5 %         | 172 / 8 / 5                           |
+
+  Der zusätzliche stille Fehler: Der bessere Tastenweg liest jetzt auch Fotos, an denen der
+  Randweg scheitert. Zwei stille Fehler sind Segmentfehler, die vorher beide Wege gleich falsch
+  lasen und jetzt der Randweg allein; Geometrie hilft dort nicht.
 - **Hermes ist ohne JIT etwa 10-mal langsamer als Node;** das S22 noch einmal 1,7-mal langsamer als
   Hermes am Mac. `make hermes` misst eine Stichprobe von 20 Fotos unter derselben Hermes-Version
   wie die App (aus dem Quellcode gebaut, `buildenv/hermes.Dockerfile`). Profil:

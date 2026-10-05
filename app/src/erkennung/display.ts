@@ -50,12 +50,15 @@ function findButton(img: Rgb): Button | null {
 // Alle Maße in Tastenhöhen; die Breite der Taste taugt nicht, sie ist bei Nahaufnahmen angeschnitten.
 const UNIT = 150; // Pixel je Tastenhöhe im groben Ausschnitt
 const REGION = [-2.6, -0.1, -0.9, 2.0]; // x links/rechts ab linker Tastenkante, y oben/unten ab Oberkante
-const GLASS = [0.41, 2.24, 0.31, 2.56]; // erwartete Glaskanten im groben Ausschnitt
-const BAND = 0.3;
+// Erwartete Glaskanten im groben Ausschnitt, Mediane am Archiv; hängen wie BAND am Vorzeichen in
+// cropRegion (TECHNOLOGIE.md, Vorzeichenfix).
+const GLASS = [0.5, 2.27, 0.29, 2.52];
+const BAND = 0.12; // breiter greift neben der Glaskante auch Ziffernkanten
 
 function cropRegion(img: Rgb, b: Button): Rgb {
-  // Drehung um den Tastenmittelpunkt (wie cv2.getRotationMatrix2D mit −angle), dann Maßstab und Verschiebung
-  const a = (-b.angle * Math.PI) / 180, al = Math.cos(a), be = Math.sin(a);
+  // Drehung um den Tastenmittelpunkt (wie cv2.getRotationMatrix2D mit angle; −angle verdoppelt die
+  // Neigung, statt sie aufzuheben), dann Maßstab und Verschiebung
+  const a = (b.angle * Math.PI) / 180, al = Math.cos(a), be = Math.sin(a);
   const rot = [al, be, (1 - al) * b.cx - be * b.cy, -be, al, be * b.cx + (1 - al) * b.cy];
   const left = b.cx - b.w / 2, top = b.cy - b.h / 2, k = UNIT / b.h;
   const tx = -k * (left + REGION[0] * b.h), ty = -k * (top + REGION[2] * b.h);

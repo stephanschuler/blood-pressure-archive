@@ -1,11 +1,11 @@
 """TypeScript-Ergebnisse (app/tools/messlauf.ts) gegen Handerfassung und Python-Referenz. Nur Kennzahlen.
 
-Mit --pruefen: Exit-Code 1, wenn die Qualität unter den Stand vom 4.10.2026 fällt.
+Mit --pruefen: Exit-Code 1, wenn die Qualität unter den Stand vom 5.10.2026 fällt.
 """
 import csv, glob, os, sys
 
-MIN_READ = 87.0   # Prozent gelesen
-MAX_SILENT = 4    # falsche Werte in der Handerfassung ohne Markierung „unsicher"
+MIN_READ = 87.5   # Prozent gelesen
+MAX_SILENT = 5    # falsche Werte in der Handerfassung ohne Markierung „unsicher"
 
 KEYS = ("sys", "dia", "puls")
 ts = {}

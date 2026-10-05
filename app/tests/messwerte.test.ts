@@ -16,6 +16,12 @@ test('Taste und Ränder lesen dasselbe: Werte ohne Unsicherheit', () => {
   assert.deepEqual(readValues(s), { values: [99, 60, 48], uncertain: [false, false, false] });
 });
 
+test('Tastenweg hebt die Neigung auf, in beide Richtungen', () => {
+  for (const winkel of [-8, -4, 4, 8]) {
+    assert.deepEqual(lesen(viaButton(szene(900, 1200, [{ werte: [128, 85, 64], links: 250, oben: 350 }], winkel))), [128, 85, 64], `${winkel}°`);
+  }
+});
+
 test('ohne Taste genügt der Weg über die Ränder, auch gedreht', () => {
   const s = szene(900, 1200, [{ werte: [173, 109, 68], links: 250, oben: 350, taste: false }], 4);
   assert.equal(viaButton(s), null);

@@ -20,8 +20,8 @@ wenn es plausibel ist. Lesen beide Wege, müssen sie übereinstimmen. Felder, de
 knapp an der Schwelle kippen könnte, markiert die App als „unsicher“ und hebt sie in der
 Bestätigungsmaske hervor.
 
-**Archivtest (`make test-archiv`, 1.510 Fotos):** 87,7 % gelesen. Von 330 Fotos mit bekanntem
-Wert: 171 richtig, 8 falsch, davon 4 als unsicher markiert.
+**Archivtest (`make test-archiv`, 1.510 Fotos):** 87,6 % gelesen. Von 330 Fotos mit bekanntem
+Wert: 177 richtig, 10 falsch, davon 5 als unsicher markiert.
 
 ---
 
@@ -424,8 +424,9 @@ darin hell, aktive Segmente sind schwarz und bleiben dunkel.
 - **Maße in Tastenhöhen** (`UNIT = 150` px je Tastenhöhe im Ausschnitt). Der Ausschnitt wird um
   den Tastenmittelpunkt gedreht und skaliert: x von −2,6 bis −0,1 Tastenhöhen ab linker
   Tastenkante, y von −0,9 bis 2,0 ab Oberkante (`REGION`), also 375 × 435 px.
-- **Glaskanten** (`GLASS`, in Tastenhöhen im Ausschnitt): links 0,41, rechts 2,24, oben 0,31,
-  unten 2,56; gesucht in einem Band von ±0,3 (`BAND`).
+- **Glaskanten** (`GLASS`, in Tastenhöhen im Ausschnitt): links 0,50, rechts 2,27, oben 0,29,
+  unten 2,52; gesucht in einem Band von ±0,12 (`BAND`). Die Drehung hebt die Neigung des Geräts
+  auf (`TECHNOLOGIE.md`, Vorzeichenfix).
 - Je Kante neun Streifen quer zur Kante, verteilt über 20–80 % der Länge; je Streifen
   Mittelwert über 20 Zeilen bzw. Spalten. Gesucht wird die stärkste Hell-dunkel-Flanke (links,
   oben) bzw. Dunkel-hell-Flanke (rechts, unten).
@@ -537,10 +538,10 @@ Messrichtung quer dazu fest.
 |---------|--------|-------|
 | `make test` → `app/tests/image.test.ts` | JPEG-Rundlauf: Maße, RGB, Farben; Hülle und kleinstes Rechteck eines gedrehten Rechtecks; Douglas-Peucker ergibt 4 Ecken; Schließen; HSV wie OpenCV; Perspektive exakt, Entzerrung trifft das Viereck | künstlich |
 | `make test` → `app/tests/segments.test.ts` | gezeichnetes Display mit hellen Geistersegmenten wird richtig gelesen; Geistersegment knapp an der Schwelle macht das Pulsfeld bei `margin 0,2` unsicher; Plausibilität inkl. SYS − DIA < 15 | künstlich |
-| `make test` → `app/tests/messwerte.test.ts` | künstliche Szene: beide Wege lesen dasselbe; Ränder allein, auch gedreht; Widerspruch → keiner; ohne Gerät nichts | künstlich |
+| `make test` → `app/tests/messwerte.test.ts` | künstliche Szene: beide Wege lesen dasselbe; Tastenweg hebt Neigung auf, beide Richtungen; Ränder allein, auch gedreht; Widerspruch → keiner; ohne Gerät nichts | künstlich |
 | `make test` → `app/tests-ui/App.test.tsx` | Oberfläche, `recognize()` als Attrappe | künstlich |
 | `make test` → `app/tests-ui/foto.test.ts` | `recognize()`: höchstens drei zugleich, Verkleinern nacheinander, Runtime frei nach Fehler; Runtime und Manipulator als Attrappe | künstlich |
-| `make test-archiv` | 1.510 Fotos, Grenzwerte ≥ 87,0 % gelesen, ≤ 4 unmarkiert falsch; Vergleich mit Python, wenn `referenz.csv` vorliegt | lokal, `daten/` |
+| `make test-archiv` | 1.510 Fotos, Grenzwerte ≥ 87,5 % gelesen, ≤ 5 unmarkiert falsch; Vergleich mit Python, wenn `referenz.csv` vorliegt | lokal, `daten/` |
 
 Die künstlichen Displays halten Geistersegmente unter der Untergrenze von 12 % Kontrast; sonst
 liest eine leere Hunderterstelle als 1. Auf echten Fotos leistet das der hellste Farbkanal.
@@ -552,11 +553,11 @@ liest eine leere Hunderterstelle als 1. Auf echten Fotos leistet das der hellste
 ### Bekannte Fehlerfälle
 
 - **Kabel und Fingerschatten über einer Ziffer:** schalten ein Segment scheinbar ein (4→9, 3→8,
-  4→1). SYS − DIA ≥ 15 fängt einen Teil ab. Rest bleibt; vom Stand des Archivtests sind 4 von 8
+  4→1). SYS − DIA ≥ 15 fängt einen Teil ab. Rest bleibt; vom Stand des Archivtests sind 5 von 10
   falschen Werten in der Handerfassung nicht markiert.
 - **Geistersegmente bei Dunkelheit,** vor allem in der Pulszeile (6→8, 5→6, 0→8); Pulsschwelle 0,5
   mildert, beseitigt nicht.
-- **Rückweisungen:** 12,3 % des Archivs bleiben ungelesen; der Nutzer tippt sie in der
+- **Rückweisungen:** 12,4 % des Archivs bleiben ungelesen; der Nutzer tippt sie in der
   Bestätigungsmaske ab.
 - **Werte außerhalb des Rasters (aus dem Code abgeleitet, nicht am Archiv gemessen):**
   - SYS ab 200: die Hunderterstelle hat nur die Segmente b und c; eine 2 ergibt ein unbekanntes

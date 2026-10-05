@@ -39,7 +39,8 @@ type Werte = [number, number, number];
 type Geraet = { werte: Werte; links: number; oben: number; taste?: boolean };
 
 const TASTE = 160; // Tastenhöhe in Pixeln
-const GLAS_B = 1.83 * TASTE, GLAS_H = 2.25 * TASTE;
+// Aus REGION und GLASS: Glas 2,27 − 0,50 breit und 2,52 − 0,29 hoch, Taste 0,33 rechts und 0,61 unter der Glasoberkante
+const GLAS_B = 1.77 * TASTE, GLAS_H = 2.23 * TASTE;
 const RAND = 5; // Pixel im entzerrten Display
 
 /** Szene w×h, um winkel Grad um die Mitte gedreht; links/oben ist die linke obere Glasecke. */
@@ -64,7 +65,7 @@ function farbe(glaeser: (Geraet & { bild: Rgb })[], u: number, v: number): Array
       const i = (py * g.bild.w + px) * 3;
       return g.bild.data.subarray(i, i + 3);
     }
-    const tasteX = x - GLAS_B - 0.36 * TASTE, tasteY = y - 0.59 * TASTE;
+    const tasteX = x - GLAS_B - 0.33 * TASTE, tasteY = y - 0.61 * TASTE;
     if (g.taste !== false && tasteX >= 0 && tasteX < TASTE / 1.6 && tasteY >= 0 && tasteY < TASTE) return [40, 170, 70];
     if (x >= -0.8 * TASTE && x < GLAS_B + 1.4 * TASTE && y >= -0.8 * TASTE && y < GLAS_H + 0.8 * TASTE) return [245, 245, 245];
   }

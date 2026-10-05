@@ -3,7 +3,7 @@ import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
-import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, G, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
   AUSWAHL, filtern, gliedern, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
@@ -267,10 +267,15 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
         {montage.map((d) => <SvgText key={d.getTime()} x={x(d.getTime())} y={H + 10} fontSize={8} fill={c.sub}>{datum(d)}</SvgText>)}
         {(['vormittag', 'nachmittag'] as const).map((h) => {
           const punkte = verlauf.filter((m) => tageshaelfte(m) === h);
-          const strich = h === 'nachmittag' ? '4 3' : undefined;
-          return (['sys', 'dia'] as const).map((k) => punkte.length === 1
-            ? <Circle key={h + k} cx={x(zeitpunkt(punkte[0]).getTime())} cy={y(punkte[0][k])} r={2} fill={c[k]} />
-            : <Polyline key={h + k} points={punkte.map((m) => `${x(zeitpunkt(m).getTime())},${y(m[k])}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.8} strokeDasharray={strich} />);
+          return (['sys', 'dia'] as const).map((k) => {
+            const p = punkte.map((m) => [x(zeitpunkt(m).getTime()), y(m[k])]);
+            return (
+              <G key={h + k} fill={c[h]}>
+                <Polyline points={p.join(' ')} fill="none" stroke={c[h]} strokeWidth={1} strokeOpacity={0.35} />
+                {p.map(([cx, cy], i) => <Circle key={i} cx={cx} cy={cy} r={2.1} />)}
+              </G>
+            );
+          });
         })}
       </>
     );
@@ -282,7 +287,7 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
   for (let k = Math.max(k0 - 1, 0); k <= k0 + 2 && k * breite < x(bis); k++) kacheln.push(k);
 
   return (
-    <View onLayout={(e) => setBreite(e.nativeEvent.layout.width)} style={{ marginTop: 6 }}>
+    <View onLayout={(e) => setBreite(e.nativeEvent.layout.width)} style={{ marginTop: 6, paddingBottom: 4 }}>
       {breite > 0 && (
         <View style={{ height: H + 12, overflow: 'hidden' }}>
           <Animated.View style={{ position: 'absolute', top: 0, left: 0, width: x(bis), height: H + 12, transform: [{ translateX: verschiebung }] }}>
@@ -294,17 +299,6 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
           </Svg>
         </View>
       )}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, paddingBottom: 4 }}>
-        <Text style={{ fontSize: 11, color: c.sys }}>━ SYS</Text>
-        <Text style={{ fontSize: 11, color: c.dia }}>━ DIA</Text>
-        {(['vormittag', 'nachmittag'] as const).map((h) => (
-          <View key={h} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Text style={{ fontSize: 11, color: c.sub }}>{h === 'vormittag' ? '━' : '╌'}</Text>
-            <Tagesbogen haelfte={h} c={c} />
-            <Text style={{ fontSize: 11, color: c.sub }}>{LABEL[h]}</Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }

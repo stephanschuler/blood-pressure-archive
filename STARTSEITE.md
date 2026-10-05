@@ -24,7 +24,6 @@
 │ Ø 7 Tage 139/82 ▼8 •0 · ♥ 73 ▲2       │  │
 │ ╱╲_╱╲  ╱‾╲_   ┊░░░░░░░│ 140          │  │ stehender Kopf,
 │ ╲_╱ ╲╱    ╲_  ┊░░░░░░░│  80          │  │ scrollt nicht mit
-│ ━ SYS ━ DIA ━ ◔ Vorm. ╌ ◕ Nachm.     │  │
 │                    SYS   DIA   PUL    │  ┘
 ├──────────────────────────────────────┤
 │ Oktober 2026                          │  Monatskopf, haftet
@@ -70,13 +69,12 @@ Eine Zeile auf grauem Grund:
 - **Zeitraum:** 21 Tage; er folgt der Liste. Die Tage, die in der Liste sichtbar sind, stehen in
   der Mitte, hellrot hinterlegt. Ganz oben endet er heute, ganz unten beginnt er am ältesten Tag.
   Er folgt der Mitte der sichtbaren Tage, kurz animiert; über mehr als 21 Tage springt er.
-- **Linien:** SYS rot, DIA blau, je eine Linie für Vormittag (durchgezogen) und Nachmittag
-  (gestrichelt). Bei gefilterter Ansicht nur die Linien der gewählten Hälfte.
+- **Punkte:** je Messung SYS und DIA als Punkt in der Farbe ihrer Tageshälfte, verbunden durch
+  blasse Linien derselben Farbe. Bei gefilterter Ansicht nur die gewählte Hälfte.
 - **Hinterlegt:** die 7 Tage der Kennzahl grau, beschriftet „Ø 7 Tage“.
 - **Raster:** gestrichelte Linien bei 80 und 140 mmHg, rechts beschriftet. Skala fest von 60 bis
   170 mmHg.
 - **Achse:** unten das Datum jedes Montags.
-- **Legende** in einer Zeile darunter: `━ SYS  ━ DIA  ━ ◔ Vormittag  ╌ ◕ Nachmittag`.
 - **Größe:** volle Breite, 44 dp Zeichenfläche plus Achsbeschriftung. Das Diagramm ist nicht
   bedienbar: kein Antippen, kein Zoom.
 
@@ -166,7 +164,7 @@ Sonne als gefüllter Punkt.
 - **Vormittag:** Sonne links auf dem Bogen, noch vor dem Mittag, in Orange.
 - **Nachmittag:** Sonne rechts auf dem Bogen, nach dem Mittag, in Violett.
 
-Die Symbole stehen im Umschalter, in der Legende des Diagramms und in jeder Messungszeile.
+Die Symbole stehen im Umschalter und in jeder Messungszeile.
 
 ## Farben
 
@@ -176,8 +174,6 @@ In `COLORS` (`app/src/theme.ts`), je Hell und Dunkel:
 |---|---|---|
 | Vormittag | `#d97706` | `#f5a524` |
 | Nachmittag | `#6d4fd8` | `#9d86ff` |
-| SYS-Linie | `#c62828` | `#ef6b6b` |
-| DIA-Linie | `#1f6feb` | `#58a6ff` |
 | Pfeil höher | `#d32f2f` | `#ef5350` |
 | Pfeil niedriger | `#2e9d5b` | `#4cc27a` |
 

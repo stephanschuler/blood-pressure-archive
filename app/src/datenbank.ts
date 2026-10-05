@@ -25,6 +25,9 @@ export const MIGRATIONS = [
    )`,
   'ALTER TABLE messpunkt DROP COLUMN arm',
   'CREATE TABLE setting (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+  // ältere Stände konnten Doppelte enthalten; ohne Aufräumen scheitert der Index beim Start
+  `DELETE FROM messpunkt WHERE id NOT IN (SELECT MIN(id) FROM messpunkt GROUP BY zeit, sys, dia, puls);
+   CREATE UNIQUE INDEX messpunkt_eindeutig ON messpunkt (zeit, sys, dia, puls)`,
 ];
 
 export function migrate(db: Sql, upTo = MIGRATIONS.length) {
@@ -37,18 +40,13 @@ export function migrate(db: Sql, upTo = MIGRATIONS.length) {
   }
 }
 
-const SAME = 'zeit = ? AND sys = ? AND dia = ? AND puls = ?';
-
 /** Legt nichts an, wenn derselbe Messpunkt schon existiert: ein Foto lässt sich mehrfach importieren. */
 export function insertMesspunkt(db: Sql, p: Omit<Messpunkt, 'id'>) {
-  db.runSync(
-    `INSERT INTO messpunkt (zeit, sys, dia, puls) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM messpunkt WHERE ${SAME})`,
-    p.zeit, p.sys, p.dia, p.puls, p.zeit, p.sys, p.dia, p.puls,
-  );
+  db.runSync('INSERT OR IGNORE INTO messpunkt (zeit, sys, dia, puls) VALUES (?, ?, ?, ?)', p.zeit, p.sys, p.dia, p.puls);
 }
 
 export function hasMesspunkt(db: Sql, p: Omit<Messpunkt, 'id'>): boolean {
-  return db.getFirstSync(`SELECT 1 FROM messpunkt WHERE ${SAME}`, p.zeit, p.sys, p.dia, p.puls) !== null;
+  return db.getFirstSync('SELECT 1 FROM messpunkt WHERE zeit = ? AND sys = ? AND dia = ? AND puls = ?', p.zeit, p.sys, p.dia, p.puls) !== null;
 }
 
 export function deleteMesspunkt(db: Sql, id: number) {

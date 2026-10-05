@@ -44,6 +44,16 @@ test('Datenbank im Stand der ersten App-Version wird ohne Verlust migriert', () 
   assert.deepEqual(listMessungen(db)[0].punkte.map(({ sys, dia, puls }) => [sys, dia, puls]), [[130, 85, 60]]);
 });
 
+test('Doppelte aus älteren Ständen: Migration behält den ersten, danach verhindert der Index neue', () => {
+  const db = memoryDb();
+  migrate(db, 3);
+  const zeile = "('2026-01-01T07:00:00.000Z', 130, 85, 60)";
+  db.runSync(`INSERT INTO messpunkt (zeit, sys, dia, puls) VALUES ${zeile}, ${zeile}, ('2026-01-01T07:03:00.000Z', 126, 83, 64)`);
+  migrate(db);
+  assert.equal(zaehlen(db), 2);
+  assert.throws(() => db.runSync(`INSERT INTO messpunkt (zeit, sys, dia, puls) VALUES ${zeile}`));
+});
+
 test('migrate ist wiederholbar', () => {
   const db = memoryDb();
   migrate(db);

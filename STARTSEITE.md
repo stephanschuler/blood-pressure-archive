@@ -119,7 +119,9 @@ Eine Zeile:
 - `›` als Hinweis zum Aufklappen, aufgeklappt um 90° gedreht
 - Symbol der Tageshälfte
 - Uhrzeit, darunter klein die Zahl der Messpunkte (`4 Pkt.`)
-- SYS, DIA, PUL fett (18 dp), darunter je ein Pfeil gegen den Ø 7 Tage der gewählten Ansicht
+- SYS, DIA, PUL fett (18 dp), darunter je ein Pfeil gegen die vorige Messung derselben Tageshälfte,
+  auch über Tage ohne Messung hinweg; auch unter „Beide“ Vormittag gegen Vormittag. Die erste Messung
+  einer Tageshälfte hat keinen Pfeil.
 
 **Antippen** klappt die Messpunkte auf: grauer Kasten, je Messpunkt Uhrzeit, SYS, DIA, PUL, darunter
 der Hinweis „Messpunkt lange drücken zum Löschen“. **Langes Drücken** auf einen Messpunkt fragt wie

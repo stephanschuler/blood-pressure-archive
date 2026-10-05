@@ -48,7 +48,8 @@ export function kalenderwoche(d: Date): number {
 }
 
 export type Woche = { art: 'woche'; kw: number; von: Date; bis: Date; anzahl: number; mittel: Werte; vorwoche: Werte | null };
-export type Tag = { art: 'tag'; tag: Date; messungen: Messung[] };
+/** `vorige[i]`: die Messung vor `messungen[i]` in derselben Tageshälfte, auch Tage zurück; Bezug ihres Pfeils. */
+export type Tag = { art: 'tag'; tag: Date; messungen: Messung[]; vorige: (Messung | null)[] };
 export type Abschnitt = { monat: Date; data: (Woche | Tag)[] };
 
 /**
@@ -62,6 +63,13 @@ export function gliedern(ms: Messung[]): Abschnitt[] {
     if (!wochen.has(k)) wochen.set(k, []);
     wochen.get(k)!.push(m);
   }
+  const vorige = new Map<Messung, Messung>();
+  const letzte: Partial<Record<Tageshaelfte, Messung>> = {};
+  for (const m of [...ms].reverse()) {
+    const h = tageshaelfte(m);
+    if (letzte[h]) vorige.set(m, letzte[h]);
+    letzte[h] = m;
+  }
   const abschnitte: Abschnitt[] = [];
   let tag: Tag | undefined;
   let woche: number | undefined;
@@ -69,6 +77,7 @@ export function gliedern(ms: Messung[]): Abschnitt[] {
     const t = zeitpunkt(m);
     if (tag?.tag.getTime() === tagesbeginn(t).getTime()) {
       tag.messungen.push(m);
+      tag.vorige.push(vorige.get(m) ?? null);
       continue;
     }
     let abschnitt = abschnitte[abschnitte.length - 1];
@@ -85,7 +94,7 @@ export function gliedern(ms: Messung[]): Abschnitt[] {
         mittel: mittel(dieser)!, vorwoche: mittel(wochen.get(tagesbeginn(von, 7).getTime()) ?? []),
       });
     }
-    tag = { art: 'tag', tag: tagesbeginn(t), messungen: [m] };
+    tag = { art: 'tag', tag: tagesbeginn(t), messungen: [m], vorige: [vorige.get(m) ?? null] };
     abschnitt.data.push(tag);
   }
   return abschnitte;

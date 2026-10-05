@@ -153,7 +153,7 @@ export function Startseite({ messungen, c, onDelete }: { messungen: Messung[]; c
           renderItem={({ item }) =>
             item.art === 'woche'
               ? <Wochenzeile w={item} c={c} />
-              : <Tageszeile tag={item} bezug={sieben.mittel} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onDelete={onDelete} c={c} />}
+              : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onDelete={onDelete} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
         {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} c={c} />}
@@ -329,9 +329,9 @@ function Kalenderblatt({ d, c }: { d: Date; c: Colors }) {
   );
 }
 
-type TagProps = { tag: Tag; bezug: Werte | null; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onDelete: (p: Messpunkt) => void; c: Colors };
+type TagProps = { tag: Tag; offen: Set<number>; markiert: boolean; onToggle: (m: Messung) => void; onDelete: (p: Messpunkt) => void; c: Colors };
 
-function Tageszeile({ tag, bezug, offen, markiert, onToggle, onDelete, c }: TagProps) {
+function Tageszeile({ tag, offen, markiert, onToggle, onDelete, c }: TagProps) {
   const leuchten = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!markiert) return;
@@ -343,7 +343,7 @@ function Tageszeile({ tag, bezug, offen, markiert, onToggle, onDelete, c }: TagP
     <Animated.View style={{ flexDirection: 'row', gap: 10, paddingVertical: 5, borderBottomWidth: 1, borderColor: c.line, backgroundColor: hinterlegt }}>
       <Kalenderblatt d={tag.tag} c={c} />
       <View style={{ flex: 1 }}>
-        {tag.messungen.map((m) => {
+        {tag.messungen.map((m, i) => {
           const auf = offen.has(m.punkte[0].id);
           return (
             <View key={m.punkte[0].id}>
@@ -354,7 +354,7 @@ function Tageszeile({ tag, bezug, offen, markiert, onToggle, onDelete, c }: TagP
                   <Text style={{ fontSize: 13, color: c.sub }}>{uhr(zeitpunkt(m))}</Text>
                   <Text style={{ fontSize: 10, color: c.sub }}>{m.punkte.length} Pkt.</Text>
                 </View>
-                <Wertspalten w={m} bezug={bezug} c={c} />
+                <Wertspalten w={m} bezug={tag.vorige[i]} c={c} />
               </Pressable>
               {auf && (
                 <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingHorizontal: 10, marginLeft: 18, marginBottom: 8 }}>

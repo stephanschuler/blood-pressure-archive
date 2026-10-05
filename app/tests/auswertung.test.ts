@@ -78,3 +78,9 @@ test('Tag suchen: der Tag selbst, sonst der nächstältere, außerhalb der jüng
   assert.deepEqual(wo(am(1, 1)), [1, 2, 27]);
   assert.equal(tagSuchen([], am(10, 1)), undefined);
 });
+
+test('Pfeil der Messung: Bezug ist die vorige Messung derselben Tageshälfte', () => {
+  const g = gliedern([m(am(10, 4, 18), 133), m(am(10, 4, 8), 130), m(am(10, 4, 7), 125), m(am(10, 1, 18), 127), m(am(9, 30, 8), 132)]);
+  const tage = g.flatMap((a) => a.data.filter((z): z is Tag => z.art === 'tag'));
+  assert.deepEqual(tage.map((t) => t.vorige.map((v) => v?.sys ?? null)), [[127, 125, 132], [null], [null]]);
+});

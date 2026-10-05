@@ -404,6 +404,9 @@ sie beim App-Start ein.
 - **CSV:** wenige Zeilen eigener Code.
 - **XLSX:** SheetJS vom CDN, nicht von npm (das npm-Paket `xlsx` 0.18.5 ist veraltet und hat CVEs),
   alternativ ExcelJS.
+- **Android-Backup:** `allowBackup: true` in `app/app.json`, ausdrücklich gewählt (5.10.2026). Die
+  Datenbank geht ins Google-Backup des Handys, sofern dort eingeschaltet; ab Android 9 mit
+  Displaysperre Ende-zu-Ende-verschlüsselt. Ergänzt die Sicherung von Hand, ersetzt sie nicht.
 - **Google Drive über das Share-Sheet:** Android bietet „In Drive speichern". Kein OAuth nötig.
 - **Direkter Drive-Upload:** OAuth-Client in der Google Cloud Console, Scope `drive.file`, Consent
   Screen auf „In Produktion", sonst laufen die Tokens nach 7 Tagen ab. Lohnt erst für automatischen

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { THEMES, THEME_LABEL, type Colors, type Theme } from './theme';
 
-export type Eintrag = { abschnitt: string; label: string; icon: number; onPress: () => void };
+export type Eintrag = { abschnitt: string; label: string; detail?: string; icon: number; onPress: () => void };
 
 const BREITE = 268;
 // setzt buildenv/build-apk.sh; Metro und Tests kennen sie nicht
@@ -52,12 +52,17 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, eintraege, messze
             {eintraege.filter((e) => e.abschnitt === a).map((e) => (
               <Pressable
                 key={e.label}
+                accessibilityLabel={e.label}
+                accessibilityHint={e.detail}
                 onPress={() => { schliessen(); e.onPress(); }}
                 accessibilityRole="button"
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 12 }}
               >
                 <Image source={e.icon} style={{ width: 24, height: 24, tintColor: c.sub }} />
-                <Text style={{ fontSize: 15, color: c.text }}>{e.label}</Text>
+                <View>
+                  <Text style={{ fontSize: 15, color: c.text }}>{e.label}</Text>
+                  {e.detail && <Text style={{ fontSize: 12, color: c.sub }}>{e.detail}</Text>}
+                </View>
               </Pressable>
             ))}
           </Fragment>

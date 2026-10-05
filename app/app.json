@@ -17,6 +17,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "allowBackup": true,
       "package": "de.g4n.bloodpressurearchive"
     },
     "web": {

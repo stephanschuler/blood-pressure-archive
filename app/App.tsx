@@ -18,6 +18,8 @@ migrate();
 
 Appearance.setColorScheme(parseTheme(getSetting('theme')));
 
+const SICHERUNG_FAELLIG_MS = 14 * 864e5;
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -33,6 +35,7 @@ function Main() {
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
   const [auswahl, setAuswahl] = useState(() => parseAuswahl(getSetting('tageshaelfte')));
   const [menue, setMenue] = useState(false);
+  const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
   const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
 
   // Android-Zurück-Taste verwirft das Foto, statt die App zu beenden
@@ -65,12 +68,19 @@ function Main() {
   const versuchen = (titel: string, aktion: () => Promise<unknown>) => () => aktion().catch((e) => Alert.alert(titel, String(e)));
   const punkte = () => messungen.flatMap((m) => m.punkte);
   const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const sicherungSpeichern = versuchen('Nicht gesichert', async () => {
+    if (!(await inOrdnerSpeichern(dateiname('sqlite'), 'application/octet-stream', sichern()))) return;
+    const jetzt = new Date().toISOString();
+    setSetting('gesichert', jetzt);
+    setGesichert(jetzt);
+    Alert.alert('Gesichert', `${zaehlen()} Messpunkte.`);
+  });
+  const gesichertAm = gesichert && new Date(gesichert).toLocaleDateString('de-DE');
+  const sicherungFaellig = messungen.length > 0 && (!gesichert || Date.now() - Date.parse(gesichert) > SICHERUNG_FAELLIG_MS);
   const eintraege: Eintrag[] = [
     {
       abschnitt: 'Datensicherung', label: 'Speichern', icon: require('./assets/download.png'),
-      onPress: versuchen('Nicht gesichert', async () => {
-        if (await inOrdnerSpeichern(dateiname('sqlite'), 'application/octet-stream', sichern())) Alert.alert('Gesichert', `${zaehlen()} Messpunkte.`);
-      }),
+      detail: gesichertAm ? `Zuletzt am ${gesichertAm}` : 'Noch nie gesichert', onPress: sicherungSpeichern,
     },
     {
       abschnitt: 'Datensicherung', label: 'Einspielen', icon: require('./assets/upload-file.png'),
@@ -132,6 +142,13 @@ function Main() {
         </Pressable>
         <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
       </View>
+      {sicherungFaellig && (
+        <Pressable onPress={sicherungSpeichern} accessibilityRole="button" style={{ backgroundColor: c.uncertain, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6 }}>
+          <Text style={{ fontSize: 13, color: c.text }}>
+            {gesichertAm ? `Letzte Datensicherung am ${gesichertAm}` : 'Noch keine Datensicherung'} · <Text style={{ fontWeight: '700' }}>Jetzt sichern</Text>
+          </Text>
+        </Pressable>
+      )}
       <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}

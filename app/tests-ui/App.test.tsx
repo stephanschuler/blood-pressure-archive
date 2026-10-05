@@ -338,6 +338,31 @@ test('Sichern: Abbruch der Ordnerwahl meldet nichts, Schreibfehler wird angezeig
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Nicht gesichert', 'Error: kein Platz'));
 });
 
+test('Sicherungshinweis: ohne Sicherung sichtbar, Antippen sichert, danach weg; Seitenleiste nennt den Tag', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  jest.spyOn(db, 'sichern').mockReturnValue(new Uint8Array([1]));
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { write } = ordner();
+  await render(<App />);
+  await fireEvent.press(screen.getByText(/^Noch keine Datensicherung/));
+  await waitFor(() => expect(write).toHaveBeenCalled());
+  expect(Date.parse(db.getSetting('gesichert')!)).toBeGreaterThan(Date.now() - 60_000);
+  expect(screen.queryByText(/Datensicherung · /)).toBeNull();
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  expect(screen.getByText(`Zuletzt am ${new Date().toLocaleDateString('de-DE')}`)).toBeOnTheScreen();
+});
+
+test.each([
+  ['30 Tage, ohne Messpunkte', 30, false, false],
+  ['13 Tage', 13, true, false],
+  ['15 Tage', 15, true, true],
+])('Sicherungshinweis nach 14 Tagen, nie ohne Messpunkte: %s', async (_, tage, mitPunkt, sichtbar) => {
+  if (mitPunkt) db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  db.setSetting('gesichert', new Date(Date.now() - tage * 864e5).toISOString());
+  await render(<App />);
+  expect(screen.queryByText(/^Letzte Datensicherung am /) !== null).toBe(sichtbar);
+});
+
 test('Einspielen: neue Messpunkte übernommen, doppelte übersprungen, Sicherung geschlossen', async () => {
   db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
   globalThis.sicherung = Object.assign(memoryDb(), { closeSync: jest.fn() });

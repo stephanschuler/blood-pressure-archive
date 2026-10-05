@@ -39,6 +39,10 @@
   expo-sqlite): in sich stimmig, auch wenn gerade geschrieben wird.
 - Danach die Meldung „Gesichert: 412 Messpunkte.“ Bricht der Nutzer die Ordnerwahl ab, passiert
   nichts.
+- Unter „Speichern" steht in der Seitenleiste der Tag der letzten Sicherung. Gibt es Messpunkte,
+  aber keine Sicherung oder ist die letzte älter als 14 Tage, zeigt die Startseite oben
+  „Noch keine Datensicherung · Jetzt sichern" bzw. „Letzte Datensicherung am … · Jetzt sichern";
+  Antippen sichert.
 
 ## Datensicherung einspielen
 

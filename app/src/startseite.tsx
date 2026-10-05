@@ -47,13 +47,27 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
   const zeitgeber = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => zeitgeber.current.forEach(clearTimeout), []);
   const spaeter = (f: () => void, ms: number) => zeitgeber.current.push(setTimeout(f, ms));
+  // beim Ziehen stellt allein der Finger den Griff; die Liste landet erst nach Schätzen und Nachkorrigieren
+  // und würde ihn zurückziehen, das Diagramm baute je Sprung Kacheln neu
+  const ziehend = useRef(false);
+  const zuletzt = useRef<Date[]>([]);
+  const melden = useRef(() => {
+    const tage = zuletzt.current;
+    if (ziehend.current || !tage.length) return;
+    sichtbar.current?.(tage[0]);
+    bereich.current?.(tage[tage.length - 1], tage[0]);
+  }).current;
+  const ziehenMelden = useRef((an: boolean) => {
+    ziehend.current = an;
+    melden();
+  }).current;
   // SectionList verlangt eine Funktion, die sich über die Lebensdauer nicht ändert
   const meldeSichtbar = useRef(({ viewableItems }: { viewableItems: ViewToken<Woche | Tag>[] }) => {
     const tage = viewableItems.flatMap((v) => (v.item?.art === 'tag' ? [v.item.tag] : []));
     if (!tage.length) return;
     oben.current = tage[0];
-    sichtbar.current?.(tage[0]);
-    bereich.current?.(tage[tage.length - 1], tage[0]);
+    zuletzt.current = tage;
+    melden();
   }).current;
   if (!messungen.length) return <Text style={{ flex: 1, color: c.sub }}>Noch keine Messungen.</Text>;
 
@@ -152,7 +166,7 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
               : <Tageszeile tag={item} offen={offen} markiert={item.tag.getTime() === markiert} onToggle={umschalten} onEdit={onEdit} onDelete={onDelete} c={c} />}
           ListEmptyComponent={<Text style={{ color: c.sub, marginTop: 12 }}>Keine Messungen am {LABEL[auswahl]}.</Text>}
         />
-        {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} c={c} />}
+        {aeltester && <Kurvenleiste abschnitte={abschnitte} von={aeltester} heute={heute} sichtbar={sichtbar} onZiel={springen} onZiehen={ziehenMelden} c={c} />}
         {hinweis && (
           <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: LEISTE + 10, bottom: 12, backgroundColor: '#333', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
             <Text style={{ color: '#fff', fontSize: 13 }}>{hinweis}</Text>
@@ -375,10 +389,13 @@ const ticken = () =>
   (Platform.OS === 'android' ? Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Tick) : Haptics.selectionAsync()).catch(() => {});
 const monatsnummer = (d: Date) => d.getFullYear() * 12 + d.getMonth();
 
-type LeisteProps = { abschnitte: Abschnitt[]; von: Date; heute: Date; sichtbar: RefObject<Sichtbar | undefined>; onZiel: (d: Date) => Tag | undefined; c: Colors };
+type LeisteProps = {
+  abschnitte: Abschnitt[]; von: Date; heute: Date; sichtbar: RefObject<Sichtbar | undefined>;
+  onZiel: (d: Date) => Tag | undefined; onZiehen: (an: boolean) => void; c: Colors;
+};
 
 /** Wochenmittel über die ganze Zeit, oben heute; zeigt den sichtbaren Ausschnitt, Antippen und Ziehen springt. */
-function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeisteProps) {
+function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, onZiehen, c }: LeisteProps) {
   const [hoehe, setHoehe] = useState(0);
   const [aktiv, setAktiv] = useState(false);
   const [oben, setOben] = useState(heute);
@@ -386,6 +403,8 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
   const wochen = useMemo(() => abschnitte.flatMap((a) => a.data.filter((z): z is Woche => z.art === 'woche')), [abschnitte]);
   const monat = useRef(-1);
   const start = useRef(0);
+  const py = useRef(0);
+  const bild = useRef(0);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>;
@@ -397,12 +416,34 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
     };
     return () => {
       clearTimeout(t);
+      cancelAnimationFrame(bild.current);
       sichtbar.current = undefined;
     };
   }, [sichtbar]);
 
   const spanne = Math.max(1, heute.getTime() - von.getTime());
-  const y = (d: Date) => Math.min(Math.max((heute.getTime() - d.getTime()) / spanne, 0), 1) * hoehe;
+  const y = useMemo(() => (d: Date) => Math.min(Math.max((heute.getTime() - d.getTime()) / spanne, 0), 1) * hoehe, [heute, spanne, hoehe]);
+
+  const kurven = useMemo(() => {
+    if (!hoehe) return null;
+    const x = (v: number) => 3 + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (LEISTE - 6);
+    const jahre: number[] = [];
+    for (let j = von.getFullYear() + 1; j <= heute.getFullYear(); j++) jahre.push(j);
+    return (
+      <Svg width={LEISTE} height={hoehe}>
+        {[80, 140].map((v) => <Line key={v} x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />)}
+        {(['sys', 'dia'] as const).map((k) => (
+          <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.1} />
+        ))}
+        {jahre.map((j) => (
+          <Fragment key={j}>
+            <Line x1={0} x2={LEISTE} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
+            <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>
+          </Fragment>
+        ))}
+      </Svg>
+    );
+  }, [hoehe, y, wochen, von, heute, c]);
 
   const ziehen = (py: number) => {
     const d = new Date(heute.getTime() - (Math.min(Math.max(py, 0), hoehe) / hoehe) * spanne);
@@ -419,24 +460,37 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
   // PanResponder entsteht einmal; ziehen dagegen hängt an Höhe und Daten des letzten Renderns
   const aktuell = useRef(ziehen);
   aktuell.current = ziehen;
-  const loslassen = () => setBlase(null);
+  // höchstens ein Sprung je Frame: jedes Move-Event einzeln staut den JS-Thread, die Liste rendert nicht nach
+  const vormerken = (p: number) => {
+    py.current = p;
+    bild.current ||= requestAnimationFrame(() => {
+      bild.current = 0;
+      aktuell.current(py.current);
+    });
+  };
+  const loslassen = () => {
+    if (bild.current) {
+      cancelAnimationFrame(bild.current);
+      bild.current = 0;
+      aktuell.current(py.current);
+    }
+    setBlase(null);
+    onZiehen(false);
+  };
   const pan = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderTerminationRequest: () => false,
     onPanResponderGrant: (e) => {
+      onZiehen(true);
       start.current = e.nativeEvent.locationY;
       monat.current = -1;
-      aktuell.current(start.current);
+      vormerken(start.current);
     },
-    onPanResponderMove: (_, g) => aktuell.current(start.current + g.dy),
+    onPanResponderMove: (_, g) => vormerken(start.current + g.dy),
     onPanResponderRelease: loslassen,
     onPanResponderTerminate: loslassen,
   })).current;
-
-  const x = (v: number) => 3 + ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * (LEISTE - 6);
-  const jahre: number[] = [];
-  for (let j = von.getFullYear() + 1; j <= heute.getFullYear(); j++) jahre.push(j);
 
   return (
     <>
@@ -450,20 +504,7 @@ function Kurvenleiste({ abschnitte, von, heute, sichtbar, onZiel, c }: LeistePro
         onAccessibilityAction={(e) => onZiel(new Date(oben.getFullYear(), oben.getMonth() + (e.nativeEvent.actionName === 'increment' ? 2 : 0), 0))}
         style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: LEISTE, backgroundColor: c.bg, borderLeftWidth: 1, borderColor: c.line }}
       >
-        {hoehe > 0 && (
-          <Svg width={LEISTE} height={hoehe}>
-            {[80, 140].map((v) => <Line key={v} x1={x(v)} x2={x(v)} y1={0} y2={hoehe} stroke={c.line} strokeDasharray="2 2" />)}
-            {(['sys', 'dia'] as const).map((k) => (
-              <Polyline key={k} points={wochen.map((wo) => `${x(wo.mittel[k])},${y(tagesbeginn(wo.von, -3))}`).join(' ')} fill="none" stroke={c[k]} strokeWidth={1.1} />
-            ))}
-            {jahre.map((j) => (
-              <Fragment key={j}>
-                <Line x1={0} x2={LEISTE} y1={y(new Date(j, 0, 1))} y2={y(new Date(j, 0, 1))} stroke={c.sub} />
-                <SvgText x={2} y={y(new Date(j, 0, 1)) + 10} fontSize={9} fontWeight="700" fill={c.sub}>’{String(j - 1).slice(2)}</SvgText>
-              </Fragment>
-            ))}
-          </Svg>
-        )}
+        {kurven}
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: y(oben) - 1, height: 2, backgroundColor: ROT }} />
         <View pointerEvents="none" style={{ position: 'absolute', left: -9, width: 18, height: 28, borderRadius: 9, backgroundColor: ROT, top: y(oben) - 14, opacity: blase || aktiv ? 1 : 0.55, elevation: 2 }} />
       </View>

@@ -441,6 +441,34 @@ test('Zeitleiste per Bedienungshilfe: zurück springt in den Vormonat, vor in de
   expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 0 }));
 });
 
+test('Zeitleiste ziehen: ein Sprung je Frame, beim Loslassen an die letzte Stelle', async () => {
+  const jetzt = new Date();
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth() - 1, 15, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 1).toISOString(), sys: 140, dia: 90, puls: 70 });
+  const scroll = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+  await render(<App />);
+  const leiste = screen.getByLabelText('Zeitleiste');
+  await fireEvent(leiste, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 40, height: 400 } } });
+  const beruehrung = (y: number) => ({
+    nativeEvent: { locationY: y, pageY: y, touches: [{}], changedTouches: [{}] },
+    touchHistory: {
+      numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: 1,
+      touchBank: [{ touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0, currentPageX: 0, currentPageY: y, currentTimeStamp: 1, previousPageX: 0, previousPageY: 0, previousTimeStamp: 0 }],
+    },
+  });
+  // kein Frame vergeht, solange der Test ihn nicht auslöst
+  const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation(() => 1);
+  jest.spyOn(global, 'cancelAnimationFrame').mockImplementation(() => {});
+  await fireEvent(leiste, 'responderGrant', beruehrung(0));
+  await fireEvent(leiste, 'responderMove', beruehrung(200));
+  await fireEvent(leiste, 'responderMove', beruehrung(400));
+  expect(frame).toHaveBeenCalledTimes(1);
+  expect(scroll).not.toHaveBeenCalled();
+  await fireEvent(leiste, 'responderRelease', beruehrung(400));
+  expect(scroll).toHaveBeenCalledTimes(1);
+  expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 1 }));
+});
+
 /** Ordnerwahl, die den Ordner liefert; geschrieben wird in write. */
 function ordner(write = jest.fn()) {
   const createFile = jest.fn(() => ({ write }));

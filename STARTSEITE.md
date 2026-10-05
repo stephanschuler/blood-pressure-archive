@@ -151,8 +151,10 @@ Keine Leiste neben der Liste: Eine Kurvenleiste nahm 40 dp weg und brachte zu we
 - **Ziehen:** springt von Tag zu Tag, ohne Messung zum nächstälteren. Liegt der Finger mehr als
   60 dp links vom Rand, geht es Tag für Tag, je 10 dp Fingerweg; beim Wechsel zählt der Henkel vom
   aktuellen Tag aus weiter. Links daneben ein Tooltip mit dem Datum, etwa „Mi 10.04.2024“, in
-  `tooltip`/`tooltipText` aus `COLORS`: hell dunkelgrau, dunkel hellgrau. Höchstens ein Sprung je
-  Frame; das Diagramm zieht erst beim Loslassen nach.
+  `tooltip`/`tooltipText` aus `COLORS`: hell dunkelgrau, dunkel hellgrau. Tag für Tag springt die
+  Liste mit, höchstens einmal je Frame. Grob wandern nur Henkel und Tooltip; die Liste springt,
+  wenn der Finger 150 ms auf einem Tag ruht, und beim Loslassen. Das Diagramm zieht erst beim
+  Loslassen nach.
 - **Haptik:** ein kurzer Tick bei jedem Tageswechsel unter dem Finger.
 - **Bedienungshilfe:** einstellbares Element „Zeitleiste“; hoch und runter wechselt den Monat.
 - **Offen:** ob Androids Zurück-Geste am Bildschirmrand das senkrechte Ziehen stört; nur auf dem

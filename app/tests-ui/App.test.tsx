@@ -478,6 +478,27 @@ test('Henkel ziehen: ein Sprung je Frame, beim Loslassen an die letzte Stelle', 
   expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 1 }));
 });
 
+test('Henkel grob: die Liste springt erst, wenn der Finger ruht', async () => {
+  const jetzt = new Date();
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth() - 1, 15, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 1).toISOString(), sys: 140, dia: 90, puls: 70 });
+  const scroll = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+  jest.spyOn(global, 'requestAnimationFrame').mockImplementation((f) => { f(0); return 0; });
+  await render(<App />);
+  await fireEvent(screen.getByTestId('henkelbahn'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 400 } } });
+  const henkel = screen.getByLabelText('Zeitleiste');
+  jest.useFakeTimers();
+  await fireEvent(henkel, 'responderGrant', beruehrung(0));
+  await fireEvent(henkel, 'responderMove', beruehrung(400));
+  expect(scroll).not.toHaveBeenCalled();
+  await act(() => jest.advanceTimersByTime(150));
+  expect(scroll).toHaveBeenCalledTimes(1);
+  expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 1 }));
+  await fireEvent(henkel, 'responderRelease', beruehrung(400, 4, 400));
+  expect(scroll).toHaveBeenCalledTimes(1);
+  jest.useRealTimers();
+});
+
 test('Henkel: Finger weit links vom Rand geht Tag für Tag, gezählt ab dem Wechsel', async () => {
   const jetzt = new Date();
   const tag = (vor: number) => new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate() - vor, 7);

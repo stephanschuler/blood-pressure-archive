@@ -59,9 +59,11 @@ export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
     sichtbar.current?.(tage[0]);
     bereich.current?.(tage[tage.length - 1], tage[0]);
   }).current;
-  const ziehenMelden = useRef((an: boolean) => {
+  const ziehenMelden = useRef((an: boolean, springt = false) => {
     ziehend.current = an;
-    melden();
+    // springt die Liste beim Loslassen noch, hält zuletzt den Stand davor; sie meldet dann selbst, außer am Listenende
+    if (springt) spaeter(melden, 300);
+    else melden();
   }).current;
   // SectionList verlangt eine Funktion, die sich über die Lebensdauer nicht ändert
   const meldeSichtbar = useRef(({ viewableItems }: { viewableItems: ViewToken<Woche | Tag>[] }) => {
@@ -447,10 +449,12 @@ const BAHN = 56;
 // Finger so weit links vom Rand: Tag für Tag, je JE_TAG Fingerweg
 const FEIN_AB = 60;
 const JE_TAG = 10;
+// grob springt die Liste erst, wenn der Finger so lange auf einem Tag ruht
+const RUHE = 150;
 
 type HenkelProps = {
   abschnitte: Abschnitt[]; sichtbar: RefObject<Sichtbar | undefined>;
-  onZiel: (d: Date) => Tag | undefined; onZiehen: (an: boolean) => void; c: Colors;
+  onZiel: (d: Date) => Tag | undefined; onZiehen: (an: boolean, springt?: boolean) => void; c: Colors;
 };
 type Finger = { py: number; x: number };
 
@@ -468,6 +472,7 @@ function Henkel({ abschnitte, sichtbar, onZiel, onZiehen, c }: HenkelProps) {
   const letzter = useRef(-1);
   const start = useRef(0);
   const bild = useRef(0);
+  const ruhe = useRef<{ t?: ReturnType<typeof setTimeout>; sprung?: () => void }>({});
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>;
@@ -479,6 +484,7 @@ function Henkel({ abschnitte, sichtbar, onZiel, onZiehen, c }: HenkelProps) {
     };
     return () => {
       clearTimeout(t);
+      clearTimeout(ruhe.current.t);
       cancelAnimationFrame(bild.current);
       sichtbar.current = undefined;
     };
@@ -504,11 +510,22 @@ function Henkel({ abschnitte, sichtbar, onZiel, onZiehen, c }: HenkelProps) {
     const i = Math.min(Math.max(roh, 0), tage.length - 1);
     if (i === letzter.current) return;
     letzter.current = i;
-    const tag = onZiel(tage[i].tag);
-    if (!tag) return;
+    const tag = tage[i].tag;
+    clearTimeout(ruhe.current.t);
+    ruhe.current = {};
+    // grob liegt jedes Ziel ungemessen weit weg: die Liste schätzte, zeichnete leer und rutschte nach
+    if (fein) onZiel(tag);
+    else ruhe.current = { sprung: () => onZiel(tag), t: setTimeout(landen, RUHE) };
     ticken();
-    setOben(tag.tag);
-    setBlase({ y: Math.min(Math.max(y(i), 24), hoehe - 24), titel: `${WOCHENTAG[tag.tag.getDay()]} ${datum(tag.tag)}${tag.tag.getFullYear()}` });
+    setOben(tag);
+    setBlase({ y: Math.min(Math.max(y(i), 24), hoehe - 24), titel: `${WOCHENTAG[tag.getDay()]} ${datum(tag)}${tag.getFullYear()}` });
+  };
+  const landen = () => {
+    const { t, sprung } = ruhe.current;
+    clearTimeout(t);
+    ruhe.current = {};
+    sprung?.();
+    return !!sprung;
   };
   const beginnen = (locationY: number, x: number) => {
     onZiehen(true);
@@ -534,8 +551,9 @@ function Henkel({ abschnitte, sichtbar, onZiel, onZiehen, c }: HenkelProps) {
       bild.current = 0;
       aktuell.current.ziehen(finger.current);
     }
+    const springt = landen();
     setBlase(null);
-    onZiehen(false);
+    onZiehen(false, springt);
   };
   const pan = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,

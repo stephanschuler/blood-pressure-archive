@@ -1,6 +1,6 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, Animated, Appearance, BackHandler, Easing, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,7 +15,7 @@ import { erkennungsfehler, useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Kopf, Startseite } from './src/startseite';
 import { csv, xlsx } from './src/tabelle';
-import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
+import { AKZENT_FARBEN, COLORS, parseAkzent, parseTheme, type Akzent, type Colors, type Theme } from './src/theme';
 
 migrate();
 
@@ -32,7 +32,9 @@ export default function App() {
 }
 
 function Main() {
-  const c = COLORS[useColorScheme() === 'dark' ? 'dark' : 'light'];
+  const schema = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const [akzent, setAkzent] = useState(() => parseAkzent(getSetting('akzent')));
+  const c = useMemo(() => ({ ...COLORS[schema], ...AKZENT_FARBEN[akzent][schema] }), [schema, akzent]);
   const insets = useSafeAreaInsets();
   const [messungen, setMessungen] = useState<Messung[]>(listMessungen);
   const [theme, setTheme] = useState<Theme>(() => parseTheme(getSetting('theme')));
@@ -73,6 +75,10 @@ function Main() {
   const waehleRaster = (r: Raster) => {
     setSetting('raster', r);
     setRaster(r);
+  };
+  const waehleAkzent = (a: Akzent) => {
+    setSetting('akzent', a);
+    setAkzent(a);
   };
   const waehleAuswahl = (a: Auswahl) => {
     setSetting('tageshaelfte', a);
@@ -195,7 +201,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} akzent={akzent} onAkzent={waehleAkzent} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
       <StatusBar style="auto" />
     </View>
   );

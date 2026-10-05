@@ -1,10 +1,11 @@
-// Seitenleiste nach DATENSICHERUNG.md: Darstellung, Raster, Datensicherung, Tabelle, Version.
-import { Fragment, useEffect, useRef } from 'react';
-import { Animated, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+// Seitenleiste nach DATENSICHERUNG.md: Darstellung, Raster, Akzente, Datensicherung, Tabelle, Version.
+import { Fragment, useEffect, useRef, type ReactNode } from 'react';
+import { Animated, Image, Modal, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { RASTER, type Raster } from './raster';
-import { THEMES, THEME_LABEL, type Colors, type Theme } from './theme';
+import { AKZENT_FARBEN, AKZENT_LABEL, AKZENTE, THEMES, THEME_LABEL, type Akzent, type Colors, type Theme } from './theme';
 
 export type Eintrag = { abschnitt: string; label: string; detail?: string; icon: number; onPress: () => void };
 
@@ -12,10 +13,12 @@ const BREITE = 268;
 // setzt buildenv/build-apk.sh; Metro und Tests kennen sie nicht
 const VERSION = process.env.EXPO_PUBLIC_VERSION ?? 'Entwicklung';
 
-export function Seitenleiste({ offen, onClose, theme, onTheme, raster, onRaster, eintraege, messzeit, fehler, c }: {
-  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; raster: Raster; onRaster: (r: Raster) => void; eintraege: Eintrag[]; messzeit: string | null; fehler: string | null; c: Colors;
+export function Seitenleiste({ offen, onClose, theme, onTheme, raster, onRaster, akzent, onAkzent, eintraege, messzeit, fehler, c }: {
+  offen: boolean; onClose: () => void; theme: Theme; onTheme: (t: Theme) => void; raster: Raster; onRaster: (r: Raster) => void;
+  akzent: Akzent; onAkzent: (a: Akzent) => void; eintraege: Eintrag[]; messzeit: string | null; fehler: string | null; c: Colors;
 }) {
   const insets = useSafeAreaInsets();
+  const schema = useColorScheme() === 'dark' ? 'dark' : 'light';
   const x = useRef(new Animated.Value(-BREITE)).current;
   useEffect(() => {
     if (offen) Animated.timing(x, { toValue: 0, duration: 200, useNativeDriver: true }).start();
@@ -37,6 +40,8 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, raster, onRaster,
         <Umschalter werte={THEMES} label={THEME_LABEL} wert={theme} onWahl={onTheme} c={c} />
         <Text style={titel}>Raster</Text>
         <Umschalter werte={RASTER} label={{ 48: '48', 52: '52', 56: '56' }} wert={raster} onWahl={onRaster} c={c} />
+        <Text style={titel}>Akzente</Text>
+        <Umschalter werte={AKZENTE} label={AKZENT_LABEL} wert={akzent} onWahl={onAkzent} c={c} inhalt={(a) => <Kreis {...AKZENT_FARBEN[a][schema]} />} />
         {[...new Set(eintraege.map((e) => e.abschnitt))].map((a) => (
           <Fragment key={a}>
             <Text style={titel}>{a}</Text>
@@ -67,7 +72,10 @@ export function Seitenleiste({ offen, onClose, theme, onTheme, raster, onRaster,
   );
 }
 
-function Umschalter<T extends string>({ werte, label, wert, onWahl, c }: { werte: readonly T[]; label: Record<T, string>; wert: T; onWahl: (w: T) => void; c: Colors }) {
+/** Mit `inhalt` statt Text: `label` bleibt Name für die Bedienungshilfe. */
+function Umschalter<T extends string>({ werte, label, wert, onWahl, c, inhalt }: {
+  werte: readonly T[]; label: Record<T, string>; wert: T; onWahl: (w: T) => void; c: Colors; inhalt?: (w: T) => ReactNode;
+}) {
   return (
     <View style={{ flexDirection: 'row', backgroundColor: c.chip, borderRadius: 8, padding: 2, marginHorizontal: 16, marginVertical: 4 }}>
       {werte.map((w) => (
@@ -75,12 +83,23 @@ function Umschalter<T extends string>({ werte, label, wert, onWahl, c }: { werte
           key={w}
           onPress={() => onWahl(w)}
           accessibilityRole="button"
+          accessibilityLabel={label[w]}
           accessibilityState={{ selected: w === wert }}
           style={{ flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 6, backgroundColor: w === wert ? c.bg : 'transparent' }}
         >
-          <Text style={{ fontSize: 13, color: w === wert ? c.text : c.sub, fontWeight: w === wert ? '600' : '400' }}>{label[w]}</Text>
+          {inhalt ? inhalt(w) : <Text style={{ fontSize: 13, color: w === wert ? c.text : c.sub, fontWeight: w === wert ? '600' : '400' }}>{label[w]}</Text>}
         </Pressable>
       ))}
     </View>
+  );
+}
+
+/** Diagonal geteilt: oben links Vormittag, unten rechts Nachmittag. */
+function Kreis({ vormittag, nachmittag }: { vormittag: string; nachmittag: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      <Path d="M4.93 19.07A10 10 0 0 1 19.07 4.93z" fill={vormittag} />
+      <Path d="M19.07 4.93A10 10 0 0 1 4.93 19.07z" fill={nachmittag} />
+    </Svg>
   );
 }

@@ -27,6 +27,8 @@
 - **Darstellung:** Umschalter System | Hell | Dunkel. Wirkt sofort und wird gespeichert.
 - **Raster:** Umschalter 48 | 52 | 56 für die Liste der Startseite (`STARTSEITE.md`,
   „Raster“). Wirkt sofort und wird gespeichert.
+- **Akzente:** Umschalter mit sechs Paletten für Vormittag und Nachmittag, je als diagonal
+  geteilter Kreis ohne Text; Vorgabe „Zwei Grautöne“. Wirkt sofort und wird gespeichert. Paletten: `AKZENT_FARBEN` in `app/src/theme.ts`.
 - **Datensicherung:** Speichern (`download`), Einspielen (`upload_file`).
 - **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), In Google Drive ablegen
   (`add_to_drive`).

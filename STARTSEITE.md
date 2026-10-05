@@ -182,8 +182,10 @@ ohne eigene Höhe, und das KW-Blatt steht mittig in der Wochenkarte.
 Eine Sonne auf ihrem Tagesbogen, 16 dp in der Liste, 18 dp im Dropdown: ein gestrichelter
 Halbkreis über einer Horizontlinie, die Sonne als gefüllter Punkt.
 
-- **Vormittag:** Sonne links auf dem Bogen, noch vor dem Mittag, in Orange.
-- **Nachmittag:** Sonne rechts auf dem Bogen, nach dem Mittag, in Violett.
+- **Vormittag:** Sonne links auf dem Bogen, noch vor dem Mittag.
+- **Nachmittag:** Sonne rechts auf dem Bogen, nach dem Mittag.
+
+Ihre Farben wählt die Seitenleiste unter „Akzente“ (`DATENSICHERUNG.md`).
 
 Die Symbole stehen im Dropdown der Tageshälfte und in jeder Messungszeile.
 
@@ -193,8 +195,6 @@ In `COLORS` (`app/src/theme.ts`), je Hell und Dunkel:
 
 | Zweck | Hell | Dunkel |
 |---|---|---|
-| Vormittag | `#d97706` | `#f5a524` |
-| Nachmittag | `#6d4fd8` | `#9d86ff` |
 | SYS-Wert der Kennzahl | `#c62828` | `#ef6b6b` |
 | DIA-Wert der Kennzahl | `#1f6feb` | `#58a6ff` |
 | Pfeil höher | `#d32f2f` | `#ef5350` |

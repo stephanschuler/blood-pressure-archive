@@ -179,6 +179,15 @@ test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   }
 });
 
+test('Seitenleiste: Akzente wählen und speichern', async () => {
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  expect(screen.getByRole('button', { name: 'Zwei Grautöne', selected: true })).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Gold und Petrol' }));
+  expect(db.getSetting('akzent')).toBe('7');
+  expect(screen.getByRole('button', { name: 'Gold und Petrol', selected: true })).toBeOnTheScreen();
+});
+
 /** Zurück-Taste nachbilden: angemeldete Handler abfangen, den zuletzt angemeldeten auslösen. */
 type BackHandlerFn = Parameters<typeof BackHandler.addEventListener>[1];
 

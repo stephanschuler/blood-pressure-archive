@@ -49,21 +49,22 @@ export function messzeit(): string | null {
 export type Foto = {
   uri: string;
   zeit: Date;
-  zeitAusExif: boolean; // false: Zeitpunkt unbekannt, „jetzt" angenommen
+  zeitAngenommen: boolean; // Zeitpunkt unbekannt, „jetzt" angenommen
   temporaer: boolean; // aus der Kamera: nach dem Auswerten löschen
 };
 
-const ausKamera = (a: ImagePicker.ImagePickerAsset): Foto => ({ uri: a.uri, zeit: new Date(), zeitAusExif: false, temporaer: true });
+// angenommen: abgeholt erst nach Prozessende, „jetzt" ist dann der Neustart
+const ausKamera = (a: ImagePicker.ImagePickerAsset, angenommen = false): Foto => ({ uri: a.uri, zeit: new Date(), zeitAngenommen: angenommen, temporaer: true });
 
 function ausGalerie(a: ImagePicker.ImagePickerAsset): Foto {
   const t = exifTime(a.exif);
-  return { uri: a.uri, zeit: t ?? new Date(), zeitAusExif: t !== null, temporaer: false };
+  return { uri: a.uri, zeit: t ?? new Date(), zeitAngenommen: t === null, temporaer: false };
 }
 
 export async function takePhoto(): Promise<Foto[]> {
   if (!(await ImagePicker.requestCameraPermissionsAsync()).granted) return [];
   const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
-  return r.canceled ? [] : r.assets.map(ausKamera);
+  return r.canceled ? [] : r.assets.map((a) => ausKamera(a));
 }
 
 export async function importPhotos(): Promise<Foto[]> {
@@ -76,7 +77,7 @@ export async function pendingPhotos(): Promise<Foto[]> {
   const r = await ImagePicker.getPendingResultAsync();
   if (!r || 'code' in r || r.canceled) return [];
   // EXIF verlangt nur der Galerieaufruf, auch ein Foto ohne EXIF bringt dort ein Objekt mit
-  return r.assets.map((a) => (a.exif ? ausGalerie(a) : ausKamera(a)));
+  return r.assets.map((a) => (a.exif ? ausGalerie(a) : ausKamera(a, true)));
 }
 
 // nacheinander: das Original liegt beim Verkleinern in voller Größe im Speicher

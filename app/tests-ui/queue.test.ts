@@ -9,7 +9,7 @@ jest.mock('../src/foto', () => ({ recognize: jest.fn(), discard: jest.fn() }));
 jest.mock('../src/db', () => ({ hasMesspunkt: () => false }));
 
 const foto = fotoModule as jest.Mocked<typeof fotoModule>;
-const FOTO: Foto = { uri: 'file:///cache/foto.jpg', zeit: new Date('2026-01-01T07:00:00Z'), zeitAusExif: false, temporaer: true };
+const FOTO: Foto = { uri: 'file:///cache/foto.jpg', zeit: new Date('2026-01-01T07:00:00Z'), zeitAngenommen: false, temporaer: true };
 
 test('Erkennung scheitert: Foto mit leeren Feldern zur Bestätigung, nach next verworfen', async () => {
   foto.recognize.mockRejectedValue(new Error('kaputt'));

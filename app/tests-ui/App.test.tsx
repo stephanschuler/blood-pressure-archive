@@ -36,7 +36,7 @@ jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }));
 jest.mock('@react-native-community/datetimepicker', () => ({ DateTimePickerAndroid: { open: jest.fn() } }));
 
 const foto = fotoModule as jest.Mocked<typeof fotoModule>;
-const FOTO: Foto = { uri: 'file:///cache/foto.jpg', zeit: new Date('2026-01-01T07:00:00Z'), zeitAusExif: false, temporaer: true };
+const FOTO: Foto = { uri: 'file:///cache/foto.jpg', zeit: new Date('2026-01-01T07:00:00Z'), zeitAngenommen: false, temporaer: true };
 
 beforeEach(() => {
   jest.restoreAllMocks();
@@ -84,6 +84,7 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   const puls = await screen.findByDisplayValue('64');
   expect(puls).toHaveStyle({ backgroundColor: '#fff3b0' });
   expect(screen.getByDisplayValue('128')).not.toHaveStyle({ backgroundColor: '#fff3b0' });
+  expect(screen.queryByText(/^Zeitpunkt nicht im Foto/)).toBeNull();
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(await screen.findByText('1 Pkt.')).toBeOnTheScreen();
   expect(screen.getAllByText('128').length).toBeGreaterThan(0);
@@ -231,7 +232,7 @@ async function zeitWaehlen(tag: Date | null, uhr?: Date) {
 }
 
 test('Zeit ohne EXIF wählen: Datum, dann Uhrzeit auf die volle Minute; Hinweis verschwindet', async () => {
-  foto.importPhotos.mockResolvedValue([{ ...FOTO, temporaer: false }]);
+  foto.importPhotos.mockResolvedValue([{ ...FOTO, zeitAngenommen: true, temporaer: false }]);
   foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Fotos importieren'));
@@ -257,7 +258,7 @@ test('Bearbeiten ändert auch die Zeit', async () => {
 test('Zurück-Taste bei einem Foto aus der Galerie verwirft ohne Rückfrage', async () => {
   const back = backButton();
   const alert = rueckfrage();
-  const galerie = { ...FOTO, zeitAusExif: true, temporaer: false };
+  const galerie = { ...FOTO, temporaer: false };
   foto.importPhotos.mockResolvedValue([galerie]);
   foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
   await render(<App />);

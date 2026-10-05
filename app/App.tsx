@@ -233,7 +233,7 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
         <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>Foto {nr} von {gesamt}</Text>
         <Zeit zeit={zeit} onChange={setZeit} c={c} />
       </View>
-      {!foto.zeitAusExif && zeit === foto.zeit && (
+      {foto.zeitAngenommen && zeit === foto.zeit && (
         <Text style={{ color: c.text, backgroundColor: c.uncertain, fontSize: 13, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 }}>
           Zeitpunkt nicht im Foto, jetzt angenommen; antippen zum Ändern
         </Text>

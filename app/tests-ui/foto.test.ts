@@ -36,7 +36,7 @@ jest.mock('expo-file-system', () => ({
   File: function (uri: string) { return { exists: true, delete: () => mockGeloescht.push(uri) }; },
 }));
 
-const foto = (n: number): Foto => ({ uri: `file:///cache/${n}.jpg`, zeit: new Date(), zeitAusExif: false, temporaer: n % 2 === 1 });
+const foto = (n: number): Foto => ({ uri: `file:///cache/${n}.jpg`, zeit: new Date(), zeitAngenommen: false, temporaer: n % 2 === 1 });
 const reading = (sys: number): Reading => ({ values: [sys, 85, 64], uncertain: [false, false, false] });
 const warten = () => new Promise((r) => setTimeout(r, 50));
 
@@ -97,14 +97,14 @@ test('verwerfen löscht nur Fotos aus der Kamera', () => {
   expect(mockGeloescht).toEqual([foto(1).uri]);
 });
 
-test('liegengebliebenes Ergebnis: Kamera ohne EXIF als Aufnahme, Galerie mit EXIF-Zeit; Abbruch und Fehler leer', async () => {
+test('liegengebliebenes Ergebnis: Kamera als Aufnahme mit angenommener Zeit, Galerie mit EXIF-Zeit; Abbruch und Fehler leer', async () => {
   const pending = require('expo-image-picker').getPendingResultAsync as jest.Mock;
   pending.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/kamera.jpg' }] });
-  expect(await pendingPhotos()).toEqual([expect.objectContaining({ uri: 'file:///cache/kamera.jpg', zeitAusExif: false, temporaer: true })]);
+  expect(await pendingPhotos()).toEqual([expect.objectContaining({ uri: 'file:///cache/kamera.jpg', zeitAngenommen: true, temporaer: true })]);
   pending.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/a.jpg', exif: { DateTimeOriginal: '2025:08:05 08:02:40' } }, { uri: 'file:///cache/b.jpg', exif: {} }] });
   expect(await pendingPhotos()).toEqual([
-    { uri: 'file:///cache/a.jpg', zeit: new Date(2025, 7, 5, 8, 2, 40), zeitAusExif: true, temporaer: false },
-    expect.objectContaining({ uri: 'file:///cache/b.jpg', zeitAusExif: false, temporaer: false }),
+    { uri: 'file:///cache/a.jpg', zeit: new Date(2025, 7, 5, 8, 2, 40), zeitAngenommen: false, temporaer: false },
+    expect.objectContaining({ uri: 'file:///cache/b.jpg', zeitAngenommen: true, temporaer: false }),
   ]);
   for (const r of [null, { canceled: true, assets: null }, { code: 'ERR', message: 'kaputt' }]) {
     pending.mockResolvedValue(r);

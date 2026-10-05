@@ -61,10 +61,12 @@ gescrollt, dass DIA knapp über der Tastatur steht.
 Links fett `Foto 3 von 7`, rechts der Zeitpunkt des Fotos ohne Sekunden (`4.10.2026, 08:12`),
 unterstrichen in `focus`-Blau: **Antippen** öffnet den Datums-, dann den Uhrzeitdialog von Android;
 Abbruch in einem der beiden ändert nichts. Die gewählte Zeit gilt auf die volle Minute, damit ein
-zweiter Import mit derselben Wahl ein Doppelter bleibt. Stammt der Zeitpunkt nicht aus dem Foto,
-steht dort der angenommene Zeitpunkt, und darunter folgt über die ganze Breite eine zweite Zeile,
+zweiter Import mit derselben Wahl ein Doppelter bleibt. Ist der Zeitpunkt nur angenommen (Foto aus
+der Galerie ohne EXIF, Aufnahme erst nach Prozessende abgeholt), steht dort der angenommene
+Zeitpunkt, und darunter folgt über die ganze Breite eine zweite Zeile,
 klein auf `uncertain`-Gelb: „Zeitpunkt nicht im Foto, jetzt angenommen; antippen zum Ändern“. Sie
-verschwindet, sobald eine Zeit gewählt ist.
+verschwindet, sobald eine Zeit gewählt ist. Eine Aufnahme aus der App trägt kein EXIF, ihr „jetzt“
+stimmt aber: kein Hinweis.
 
 ### 2. Fortschrittsbalken
 

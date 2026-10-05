@@ -69,8 +69,8 @@ SYS-Wert, darunter `139/82, ♥73`. SYS rot, DIA blau, Puls kleiner: das ♥ in 
 - **Zeitraum:** 21 Tage; er folgt der Liste. Die Tage, die in der Liste sichtbar sind, stehen in
   der Mitte, hellrot hinterlegt. Ganz oben endet er heute, ganz unten beginnt er am ältesten Tag.
   Er folgt der Mitte der sichtbaren Tage, kurz animiert; über mehr als 21 Tage springt er.
-- **Punkte:** je Messung SYS und DIA als Punkt in der Farbe ihrer Tageshälfte, verbunden durch
-  blasse Linien derselben Farbe. Bei gefilterter Ansicht nur die gewählte Hälfte.
+- **Bänder:** je Tageshälfte eine blasse Fläche zwischen SYS- und DIA-Linie, Fläche und beide
+  Linien in der Farbe der Tageshälfte; keine Punkte. Bei gefilterter Ansicht nur die gewählte Hälfte.
 - **Hinterlegt:** die 7 Tage der Kennzahl grau, beschriftet „Ø 7 Tage“.
 - **Raster:** gestrichelte Linien bei 80 und 140 mmHg, rechts beschriftet. Skala fest von 60 bis
   170 mmHg.

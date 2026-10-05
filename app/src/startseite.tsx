@@ -3,7 +3,7 @@ import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Animated, Easing, Modal, PanResponder, Platform, Pressable, SectionList, StyleSheet, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
-import Svg, { Circle, G, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, G, Line, Path, Polygon, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
   AUSWAHL, filtern, gliedern, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
@@ -315,15 +315,14 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
         {montage.map((d) => <SvgText key={d.getTime()} x={x(d.getTime())} y={H + 10} fontSize={8} fill={c.sub}>{datum(d)}</SvgText>)}
         {(['vormittag', 'nachmittag'] as const).map((h) => {
           const punkte = verlauf.filter((m) => tageshaelfte(m) === h);
-          return (['sys', 'dia'] as const).map((k) => {
-            const p = punkte.map((m) => [x(zeitpunkt(m).getTime()), y(m[k])]);
-            return (
-              <G key={h + k} fill={c[h]}>
-                <Polyline points={p.join(' ')} fill="none" stroke={c[h]} strokeWidth={1} strokeOpacity={0.35} />
-                {p.map(([cx, cy], i) => <Circle key={i} cx={cx} cy={cy} r={2.1} />)}
-              </G>
-            );
-          });
+          const [sys, dia] = (['sys', 'dia'] as const).map((k) => punkte.map((m) => [x(zeitpunkt(m).getTime()), y(m[k])]));
+          return (
+            <G key={h} fill="none" stroke={c[h]} strokeWidth={1.2} strokeLinejoin="round">
+              <Polygon points={[...sys, ...[...dia].reverse()].join(' ')} fill={c[h]} fillOpacity={0.18} stroke="none" />
+              <Polyline points={sys.join(' ')} />
+              <Polyline points={dia.join(' ')} />
+            </G>
+          );
         })}
       </>
     );

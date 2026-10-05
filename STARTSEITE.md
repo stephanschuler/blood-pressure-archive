@@ -9,7 +9,6 @@
   Ortszeit liegt, sonst zum Nachmittag.
 - **Ø 7 Tage:** Mittel über alle Messungen von heute und den sechs Kalendertagen davor. Jede
   Messung zählt gleich, egal wie viele Messpunkte sie hat.
-- **Vorwoche:** die sieben Kalendertage vor diesen sieben.
 - **Kalenderwoche:** nach ISO 8601, Montag bis Sonntag.
 - **Trendpfeil:** zeigt die Differenz eines Werts zu einem Bezugswert, in mmHg bzw. Schlägen:
   `▲4` höher, `▼4` niedriger, `•0` gleich.
@@ -18,11 +17,10 @@
 
 ```
 ┌──────────────────────────────────────┐
-│ Blutdruck            Darstellung: Hell│  Titelzeile, unverändert
+│ ☰ Blutdruck    ∅ 7-Tage:    │ [◔◕▾]  │  Titelzeile mit Kennzahl
+│                139/82, ♥73  │        │  und Tageshälfte
 ├──────────────────────────────────────┤
-│ [◔ Vormittag][◕ Nachmittag][ Beide  ]│  ┐
-│ Ø 7 Tage 139/82 ▼8 •0 · ♥ 73 ▲2       │  │
-│ ╱╲_╱╲  ╱‾╲_   ┊░░░░░░░│ 140          │  │ stehender Kopf,
+│ ╱╲_╱╲  ╱‾╲_   ┊░░░░░░░│ 140          │  ┐ stehender Kopf,
 │ ╲_╱ ╲╱    ╲_  ┊░░░░░░░│  80          │  │ scrollt nicht mit
 │                    SYS   DIA   PUL    │  ┘
 ├──────────────────────────────────────┤
@@ -45,24 +43,24 @@
 └──────────────────────────────────────┘
 ```
 
-### 1. Umschalter Tageshälfte
+Der Titel „Blutdruck“ steht in 24 statt 28 dp, damit Kennzahl und Auswahl daneben Platz haben.
 
-Drei gleich breite Segmente: **Vormittag**, **Nachmittag**, **Beide**. Vorgabe ist „Beide“. Vor
-„Vormittag“ und „Nachmittag“ steht das jeweilige Symbol (siehe unten).
+### 1. Auswahl Tageshälfte
+
+Dropdown am rechten Rand der Titelzeile, nur mit Symbolen (siehe unten): Vormittag, Nachmittag,
+Beide. „Beide“ zeigt beide Symbole verkleinert und versetzt. Vorgabe ist „Beide“. Ein senkrechter
+Strich trennt das Dropdown von der Kennzahl.
 
 Die Auswahl filtert alles darunter: Kennzahl, Diagramm, Wochenzeilen, Liste. Sie bleibt über einen
 Neustart der App erhalten, wie die Darstellung.
 
 ### 2. Kennzahl
 
-Eine Zeile auf grauem Grund:
+Mittig zwischen Titel und Strich, zweizeilig: oben klein `∅ 7-Tage:`, linksbündig über dem
+SYS-Wert, darunter `139/82, ♥73`. SYS rot, DIA blau, Puls kleiner: das ♥ in Herz-Rot, die Zahl grau.
 
-`Ø 7 Tage 139/82 ▼8 •0 · ♥ 73 ▲2   Trend ggü. Vorwoche`
-
-- SYS/DIA und Puls als Ø 7 Tage der gewählten Tageshälfte, im Titel ergänzt um „vormittags“
-  bzw. „nachmittags“.
-- Die Pfeile vergleichen mit dem Ø der Vorwoche derselben Auswahl.
-- Keine Messung in den 7 Tagen: `Ø 7 Tage –`. Keine Messung in der Vorwoche: kein Pfeil.
+- SYS/DIA und Puls als Ø 7 Tage der gewählten Tageshälfte.
+- Keine Messung in den 7 Tagen: `–`.
 
 ### 3. Diagramm
 
@@ -158,13 +156,13 @@ Keine Leiste neben der Liste: Eine Kurvenleiste nahm 40 dp weg und brachte zu we
 
 ## Symbole der Tageshälften
 
-Eine Sonne auf ihrem Tagesbogen, 16 dp: ein gestrichelter Halbkreis über einer Horizontlinie, die
-Sonne als gefüllter Punkt.
+Eine Sonne auf ihrem Tagesbogen, 16 dp in der Liste, 18 dp im Dropdown: ein gestrichelter
+Halbkreis über einer Horizontlinie, die Sonne als gefüllter Punkt.
 
 - **Vormittag:** Sonne links auf dem Bogen, noch vor dem Mittag, in Orange.
 - **Nachmittag:** Sonne rechts auf dem Bogen, nach dem Mittag, in Violett.
 
-Die Symbole stehen im Umschalter und in jeder Messungszeile.
+Die Symbole stehen im Dropdown der Tageshälfte und in jeder Messungszeile.
 
 ## Farben
 
@@ -174,6 +172,8 @@ In `COLORS` (`app/src/theme.ts`), je Hell und Dunkel:
 |---|---|---|
 | Vormittag | `#d97706` | `#f5a524` |
 | Nachmittag | `#6d4fd8` | `#9d86ff` |
+| SYS-Wert der Kennzahl | `#c62828` | `#ef6b6b` |
+| DIA-Wert der Kennzahl | `#1f6feb` | `#58a6ff` |
 | Pfeil höher | `#d32f2f` | `#ef5350` |
 | Pfeil niedriger | `#2e9d5b` | `#4cc27a` |
 
@@ -182,6 +182,6 @@ beim Blutdruck.
 
 ## Leere Zustände
 
-- Noch keine Messung: kein Diagramm, keine Kennzahl, Text „Noch keine Messungen.“
+- Noch keine Messung: Kennzahl `–`, kein Diagramm, Text „Noch keine Messungen.“
 - Gefilterte Hälfte ohne Messungen: Kennzahl `–`, leeres Diagramm mit Raster, Text „Keine Messungen
   am Vormittag.“ bzw. „… am Nachmittag.“

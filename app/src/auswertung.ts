@@ -31,11 +31,11 @@ export function mittel(ms: Messung[]): Werte | null {
   return { sys: avg('sys'), dia: avg('dia'), puls: avg('puls') };
 }
 
-/** Heute und die sechs Kalendertage davor, dazu die sieben Tage davor als Vorwoche. */
+/** Heute und die sechs Kalendertage davor. */
 export function siebenTage(ms: Messung[], heute: Date) {
   const beginn = tagesbeginn(heute, 6);
   const messungen = zwischen(ms, beginn, tagesbeginn(heute, -1));
-  return { messungen, mittel: mittel(messungen), vorwoche: mittel(zwischen(ms, tagesbeginn(heute, 13), beginn)) };
+  return { messungen, mittel: mittel(messungen) };
 }
 
 export const montag = (d: Date) => tagesbeginn(d, (d.getDay() + 6) % 7);

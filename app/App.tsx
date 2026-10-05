@@ -12,7 +12,7 @@ import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
 import type { Messpunkt } from './src/messung';
 import { erkennungsfehler, useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
-import { Startseite } from './src/startseite';
+import { Kopf, Startseite } from './src/startseite';
 import { csv, xlsx } from './src/tabelle';
 import { COLORS, parseTheme, type Colors, type Theme } from './src/theme';
 
@@ -172,7 +172,8 @@ function Main() {
         <Pressable onPress={() => setMenue(true)} accessibilityRole="button" accessibilityLabel="Menü" style={{ padding: 10, marginLeft: -10 }}>
           <Image source={require('./assets/menu.png')} style={{ width: 24, height: 24, tintColor: c.text }} />
         </Pressable>
-        <Text style={{ flex: 1, fontSize: 28, fontWeight: '600', color: c.text }}>Blutdruck</Text>
+        <Text style={{ fontSize: 24, fontWeight: '600', color: c.text }}>Blutdruck</Text>
+        <Kopf messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} />
       </View>
       {sicherungFaellig && (
         <Pressable onPress={sicherungSpeichern} accessibilityRole="button" style={{ backgroundColor: c.uncertain, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6 }}>
@@ -181,7 +182,7 @@ function Main() {
           </Text>
         </Pressable>
       )}
-      <Startseite messungen={messungen} auswahl={auswahl} onAuswahl={waehleAuswahl} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
+      <Startseite messungen={messungen} auswahl={auswahl} c={c} onEdit={setBearbeiten} onDelete={askDelete} />
       <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
         {/* Aufnehmen rechts: häufiger gebraucht, für den rechten Daumen */}
         <IconButton label="Von Hand eintragen" icon={require('./assets/edit.png')} onPress={() => setBearbeiten('neu')} />

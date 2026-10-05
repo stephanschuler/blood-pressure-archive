@@ -152,9 +152,11 @@ test('Umschalter Tageshälfte filtert die Liste und wird gespeichert; Messung kl
   await render(<App />);
   expect(screen.getByLabelText('1 Messpunkt')).toBeOnTheScreen();
   expect(screen.getByLabelText('2 Messpunkte')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Tageshälfte: Beide' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Vormittag' }));
   expect(screen.queryByLabelText('2 Messpunkte')).toBeNull();
   expect(db.getSetting('tageshaelfte')).toBe('vormittag');
+  await fireEvent.press(screen.getByRole('button', { name: 'Tageshälfte: Vormittag' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Nachmittag' }));
   expect(screen.queryByLabelText('1 Messpunkt')).toBeNull();
   expect(screen.queryByLabelText(/^Messpunkt/)).toBeNull();

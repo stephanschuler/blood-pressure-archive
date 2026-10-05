@@ -41,7 +41,6 @@ test('Ø 7 Tage: heute und sechs Tage davor, Vorwoche die sieben Tage davor', ()
   const s = siebenTage(ms, heute);
   assert.deepEqual(s.messungen.map((x) => x.sys), [150, 130]);
   assert.equal(s.mittel!.sys, 140);
-  assert.equal(s.vorwoche!.sys, 105);
   assert.equal(siebenTage([], heute).mittel, null);
 });
 

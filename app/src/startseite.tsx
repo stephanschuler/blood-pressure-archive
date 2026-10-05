@@ -2,7 +2,7 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Animated, Easing, PanResponder, Platform, Pressable, SectionList, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
+import { Animated, Easing, Modal, PanResponder, Platform, Pressable, SectionList, StyleSheet, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
 import Svg, { Circle, G, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
@@ -33,8 +33,8 @@ const wertzeile = (groesse: number) => Math.round(groesse * 4 / 3);
 type Sichtbar = (oben: Date) => void;
 type Bereich = (unten: Date, oben: Date) => void;
 
-export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete }: {
-  messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void;
+export function Startseite({ messungen, auswahl, c, onEdit, onDelete }: {
+  messungen: Messung[]; auswahl: Auswahl; c: Colors; onEdit: (p: Messpunkt) => void; onDelete: (p: Messpunkt) => void;
 }) {
   const [offen, setOffen] = useState(new Set<number>());
   const [markiert, setMarkiert] = useState<number | null>(null);
@@ -74,7 +74,6 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
   if (!messungen.length) return <Text style={{ flex: 1, color: c.sub }}>Noch keine Messungen.</Text>;
 
   const heute = new Date();
-  const sieben = siebenTage(ms, heute);
   const aeltester = (abschnitte.at(-1)?.data.at(-1) as Tag | undefined)?.tag;
 
   const springen = (d: Date, versuche = 0) => {
@@ -110,21 +109,6 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', backgroundColor: c.chip, borderRadius: 8, padding: 2, marginBottom: 6 }}>
-        {AUSWAHL.map((a) => (
-          <Pressable
-            key={a}
-            onPress={() => onAuswahl(a)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: a === auswahl }}
-            style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4, paddingVertical: 6, borderRadius: 6, backgroundColor: a === auswahl ? c.bg : 'transparent' }}
-          >
-            {a !== 'beide' && <Tagesbogen haelfte={a} c={c} />}
-            <Text style={{ fontSize: 12, color: a === auswahl ? c.text : c.sub, fontWeight: a === auswahl ? '600' : '400' }}>{LABEL[a]}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Kennzahl auswahl={auswahl} mittel={sieben.mittel} vorwoche={sieben.vorwoche} c={c} />
       <Diagramm ms={ms} von={aeltester} heute={heute} bereich={bereich} c={c} />
       <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
         {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
@@ -179,13 +163,26 @@ export function Startseite({ messungen, auswahl, onAuswahl, c, onEdit, onDelete 
   );
 }
 
-function Tagesbogen({ haelfte, c }: { haelfte: Tageshaelfte; c: Colors }) {
+function Bogen({ haelfte, c }: { haelfte: Tageshaelfte; c: Colors }) {
   const farbe = c[haelfte];
   return (
-    <Svg width={16} height={16} viewBox="0 0 16 16">
+    <>
       <Path d="M2 12.5A6 6 0 0 1 14 12.5" fill="none" stroke={farbe} strokeWidth={1.2} strokeDasharray="1.5 1.5" />
       <Line x1={1} x2={15} y1={12.8} y2={12.8} stroke={farbe} strokeWidth={1.4} />
       <Circle cx={haelfte === 'vormittag' ? 3.8 : 12.2} cy={8.3} r={2.4} fill={farbe} />
+    </>
+  );
+}
+
+function Tagesbogen({ haelfte, c, groesse = 16 }: { haelfte: Auswahl; c: Colors; groesse?: number }) {
+  return (
+    <Svg width={groesse} height={groesse} viewBox="0 0 16 16">
+      {haelfte === 'beide' ? (
+        <>
+          <G x={-1} y={-1.5} scale={11 / 16}><Bogen haelfte="vormittag" c={c} /></G>
+          <G x={6} y={5.5} scale={11 / 16}><Bogen haelfte="nachmittag" c={c} /></G>
+        </>
+      ) : <Bogen haelfte={haelfte} c={c} />}
     </Svg>
   );
 }
@@ -196,22 +193,71 @@ function Trend({ wert, bezug, c }: { wert: number; bezug?: number; c: Colors }) 
   return <Text style={{ fontSize: 11, color: d > 2 ? c.up : d < -2 ? c.down : c.sub }}>{d > 0 ? '▲' : d < 0 ? '▼' : '•'}{Math.abs(d)}</Text>;
 }
 
-function Kennzahl({ auswahl, mittel, vorwoche, c }: { auswahl: Auswahl; mittel: Werte | null; vorwoche: Werte | null; c: Colors }) {
-  const titel = `Ø 7 Tage${auswahl === 'beide' ? '' : auswahl === 'vormittag' ? ' vormittags' : ' nachmittags'} `;
+/** Kennzahl und Auswahl der Tageshälfte; App.tsx setzt sie in die Titelzeile. */
+export function Kopf({ messungen, auswahl, onAuswahl, c }: { messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors }) {
+  const mittel = useMemo(() => siebenTage(filtern(messungen, auswahl), new Date()).mittel, [messungen, auswahl]);
   return (
-    <View style={{ backgroundColor: c.chip, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 }}>
-      <Text style={{ fontSize: 13, color: c.text }}>
-        {titel}
-        {mittel ? (
-          <>
-            <Text style={{ fontWeight: '700' }}>{mittel.sys}/{mittel.dia}</Text>{' '}
-            <Trend wert={mittel.sys} bezug={vorwoche?.sys} c={c} /> <Trend wert={mittel.dia} bezug={vorwoche?.dia} c={c} />
-            {' · '}<Text style={{ color: ROT }}>♥</Text> {mittel.puls} <Trend wert={mittel.puls} bezug={vorwoche?.puls} c={c} />
-            {vorwoche && <Text style={{ fontSize: 10, color: c.sub }}>{'  '}Trend ggü. Vorwoche</Text>}
-          </>
-        ) : '–'}
-      </Text>
-    </View>
+    <>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <View>
+          <Text style={{ fontSize: 10, color: c.sub }}>∅ 7-Tage:</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: c.text }}>
+            {mittel ? (
+              <>
+                <Text style={{ color: c.sys }}>{mittel.sys}</Text>/<Text style={{ color: c.dia }}>{mittel.dia}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '400' }}>, </Text>
+                <Text style={{ fontSize: 11, fontWeight: '400', color: ROT }}>♥</Text>
+                <Text style={{ fontSize: 11.5, fontWeight: '400', color: c.sub }}>{mittel.puls}</Text>
+              </>
+            ) : '–'}
+          </Text>
+        </View>
+      </View>
+      <View style={{ width: 1, height: 28, backgroundColor: c.line, marginRight: 12 }} />
+      <AuswahlMenue auswahl={auswahl} onAuswahl={onAuswahl} c={c} />
+    </>
+  );
+}
+
+function AuswahlMenue({ auswahl, onAuswahl, c }: { auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors }) {
+  const knopf = useRef<View>(null);
+  const [offen, setOffen] = useState(false);
+  const [lage, setLage] = useState({ top: 0, right: 0 });
+  const { width } = useWindowDimensions();
+  const oeffnen = () => {
+    knopf.current?.measureInWindow((x, y, w, h) => setLage({ top: y + h + 4, right: width - x - w }));
+    setOffen(true);
+  };
+  return (
+    <>
+      <Pressable
+        ref={knopf}
+        onPress={oeffnen}
+        accessibilityRole="button"
+        accessibilityLabel={`Tageshälfte: ${LABEL[auswahl]}`}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: c.chip, borderRadius: 8, paddingVertical: 5, paddingLeft: 8, paddingRight: 6 }}
+      >
+        <Tagesbogen haelfte={auswahl} c={c} groesse={18} />
+        <Text style={{ fontSize: 10, color: c.sub }}>▾</Text>
+      </Pressable>
+      <Modal visible={offen} transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setOffen(false)}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOffen(false)} accessibilityLabel="Auswahl schließen" />
+        <View style={{ position: 'absolute', ...lage, backgroundColor: c.bg, borderRadius: 8, padding: 4, elevation: 8 }}>
+          {AUSWAHL.map((a) => (
+            <Pressable
+              key={a}
+              onPress={() => { setOffen(false); onAuswahl(a); }}
+              accessibilityRole="button"
+              accessibilityLabel={LABEL[a]}
+              accessibilityState={{ selected: a === auswahl }}
+              style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: 6, backgroundColor: a === auswahl ? c.chip : 'transparent' }}
+            >
+              <Tagesbogen haelfte={a} c={c} groesse={18} />
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
+    </>
   );
 }
 

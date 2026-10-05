@@ -8,7 +8,7 @@ import { parseAuswahl, type Auswahl } from './src/auswertung';
 import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, updateMesspunkt, zaehlen, type Messung } from './src/db';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
 import type { Values } from './src/erkennung/segments';
-import { importPhotos, messzeit, takePhoto } from './src/foto';
+import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
 import type { Messpunkt } from './src/messung';
 import { useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
@@ -40,6 +40,10 @@ function Main() {
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
   const [bearbeiten, setBearbeiten] = useState<Messpunkt | null>(null);
   const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
+
+  useEffect(() => {
+    pendingPhotos().then((fotos) => fotos.length && enqueue(fotos));
+  }, []);
 
   // Android-Zurück-Taste schließt die Ansicht, statt die App zu beenden; bei einer Aufnahme erst nach
   // Rückfrage, das Foto wird danach gelöscht

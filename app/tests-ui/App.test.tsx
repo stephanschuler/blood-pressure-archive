@@ -26,7 +26,7 @@ jest.mock('expo-sqlite', () => ({
   }),
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn(), messzeit: () => null }));
+jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), pendingPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn(), messzeit: () => null }));
 jest.mock('expo-file-system', () => ({
   Directory: { pickDirectoryAsync: jest.fn() },
   File: Object.assign(jest.fn(() => ({ uri: 'file:///cache/datei', create: jest.fn(), write: jest.fn() })), { pickFileAsync: jest.fn() }),
@@ -43,6 +43,15 @@ beforeEach(() => {
   jest.clearAllMocks();
   globalThis.testDb = memoryDb();
   db.migrate();
+  foto.pendingPhotos.mockResolvedValue([]);
+});
+
+test('beim Start liegengebliebene Aufnahme: gleich zur Bestätigung', async () => {
+  foto.pendingPhotos.mockResolvedValue([FOTO]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  expect(await screen.findByDisplayValue('128')).toBeOnTheScreen();
+  expect(screen.getByText('Foto 1 von 1')).toBeOnTheScreen();
 });
 
 test('leerer Start: Hinweis und Knöpfe', async () => {

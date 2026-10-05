@@ -31,6 +31,7 @@ jest.mock('expo-image-manipulator', () => {
     },
   };
 });
+jest.mock('expo-image-picker', () => ({ getPendingResultAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({
   File: function (uri: string) { return { exists: true, delete: () => mockGeloescht.push(uri) }; },
 }));
@@ -41,11 +42,12 @@ const warten = () => new Promise((r) => setTimeout(r, 50));
 
 let recognize: typeof import('../src/foto').recognize;
 let discard: typeof import('../src/foto').discard;
+let pendingPhotos: typeof import('../src/foto').pendingPhotos;
 
 beforeEach(() => {
   // foto.ts hält Runtimes und Warteschlange auf Modulebene
   jest.resetModules();
-  ({ recognize, discard } = require('../src/foto'));
+  ({ recognize, discard, pendingPhotos } = require('../src/foto'));
   mockLaeufe.length = 0;
   mockGeloescht.length = 0;
   Object.assign(mockVerkleinern, { aktiv: 0, max: 0, reihenfolge: [], fehler: new Set() });
@@ -93,4 +95,19 @@ test('verwerfen löscht nur Fotos aus der Kamera', () => {
   discard(foto(1));
   discard(foto(2));
   expect(mockGeloescht).toEqual([foto(1).uri]);
+});
+
+test('liegengebliebenes Ergebnis: Kamera ohne EXIF als Aufnahme, Galerie mit EXIF-Zeit; Abbruch und Fehler leer', async () => {
+  const pending = require('expo-image-picker').getPendingResultAsync as jest.Mock;
+  pending.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/kamera.jpg' }] });
+  expect(await pendingPhotos()).toEqual([expect.objectContaining({ uri: 'file:///cache/kamera.jpg', zeitAusExif: false, temporaer: true })]);
+  pending.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///cache/a.jpg', exif: { DateTimeOriginal: '2025:08:05 08:02:40' } }, { uri: 'file:///cache/b.jpg', exif: {} }] });
+  expect(await pendingPhotos()).toEqual([
+    { uri: 'file:///cache/a.jpg', zeit: new Date(2025, 7, 5, 8, 2, 40), zeitAusExif: true, temporaer: false },
+    expect.objectContaining({ uri: 'file:///cache/b.jpg', zeitAusExif: false, temporaer: false }),
+  ]);
+  for (const r of [null, { canceled: true, assets: null }, { code: 'ERR', message: 'kaputt' }]) {
+    pending.mockResolvedValue(r);
+    expect(await pendingPhotos()).toEqual([]);
+  }
 });

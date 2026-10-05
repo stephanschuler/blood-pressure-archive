@@ -132,6 +132,10 @@ Bei offener Tastatur liegen sie unter ihr: erreichbar durch Scrollen, Speichern 
 versehentliches Zurück verlöre die Messung. Fotos aus der Galerie bleiben dort und gehen ohne
 Rückfrage.
 
+**Beim Start** legt die App Fotos vor, die Kamera oder Galerie noch geliefert haben, nachdem Android
+die App währenddessen beendet hatte (`getPendingResultAsync`). Eine Aufnahme gilt dann ab dem
+Start als „jetzt“; die Zeit lässt sich wählen.
+
 ## Farben
 
 In `COLORS` (`app/src/theme.ts`):

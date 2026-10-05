@@ -53,20 +53,30 @@ export type Foto = {
   temporaer: boolean; // aus der Kamera: nach dem Auswerten löschen
 };
 
+const ausKamera = (a: ImagePicker.ImagePickerAsset): Foto => ({ uri: a.uri, zeit: new Date(), zeitAusExif: false, temporaer: true });
+
+function ausGalerie(a: ImagePicker.ImagePickerAsset): Foto {
+  const t = exifTime(a.exif);
+  return { uri: a.uri, zeit: t ?? new Date(), zeitAusExif: t !== null, temporaer: false };
+}
+
 export async function takePhoto(): Promise<Foto[]> {
   if (!(await ImagePicker.requestCameraPermissionsAsync()).granted) return [];
   const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
-  if (r.canceled) return [];
-  return r.assets.map((a) => ({ uri: a.uri, zeit: new Date(), zeitAusExif: false, temporaer: true }));
+  return r.canceled ? [] : r.assets.map(ausKamera);
 }
 
 export async function importPhotos(): Promise<Foto[]> {
   const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, exif: true });
-  if (r.canceled) return [];
-  return r.assets.map((a) => {
-    const t = exifTime(a.exif);
-    return { uri: a.uri, zeit: t ?? new Date(), zeitAusExif: t !== null, temporaer: false };
-  });
+  return r.canceled ? [] : r.assets.map(ausGalerie);
+}
+
+/** Fotos aus Kamera oder Galerie, während deren Android die App beendet hatte; sonst leer. */
+export async function pendingPhotos(): Promise<Foto[]> {
+  const r = await ImagePicker.getPendingResultAsync();
+  if (!r || 'code' in r || r.canceled) return [];
+  // EXIF verlangt nur der Galerieaufruf, auch ein Foto ohne EXIF bringt dort ein Objekt mit
+  return r.assets.map((a) => (a.exif ? ausGalerie(a) : ausKamera(a)));
 }
 
 // nacheinander: das Original liegt beim Verkleinern in voller Größe im Speicher

@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 // Oberfläche mit echter SQLite-Datenbank (node:sqlite); Kamera, Bildauswahl und Erkennung sind Attrappen.
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert, Appearance, BackHandler } from 'react-native';
+import { Alert, Appearance, BackHandler, SectionList } from 'react-native';
 
 import type { Reading } from '../src/erkennung/messwerte';
 import type { Foto } from '../src/foto';
@@ -284,6 +284,20 @@ test('sichtbare Zeilen melden: SectionList übergibt keyExtractor auch den Monat
   const zellen = container.queryAll((n) => n.type === 'View' && !!n.props.onFocusCapture);
   for (const [i, z] of zellen.entries()) await fireEvent(z, 'layout', layout({ y: i * 40 }));
   expect(screen.getByText('Januar 2026')).toBeOnTheScreen();
+});
+
+test('Zeitleiste per Bedienungshilfe: zurück springt in den Vormonat, vor in den Folgemonat', async () => {
+  const jetzt = new Date();
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth() - 1, 15, 7).toISOString(), sys: 130, dia: 85, puls: 60 });
+  db.insertMesspunkt({ zeit: new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 1).toISOString(), sys: 140, dia: 90, puls: 70 });
+  const scroll = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+  await render(<App />);
+  const leiste = screen.getByLabelText('Zeitleiste');
+  // Monatsabschnitte, neueste zuerst: 0 dieser Monat, 1 Vormonat
+  await fireEvent(leiste, 'accessibilityAction', { nativeEvent: { actionName: 'decrement' } });
+  expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 1 }));
+  await fireEvent(leiste, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+  expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ sectionIndex: 0 }));
 });
 
 /** Ordnerwahl, die den Ordner liefert; geschrieben wird in write. */

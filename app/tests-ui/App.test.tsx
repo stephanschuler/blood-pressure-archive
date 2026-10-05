@@ -270,7 +270,7 @@ test('Zurück-Taste bei einem Foto aus der Galerie verwirft ohne Rückfrage', as
   expect(foto.discard).toHaveBeenCalledWith(galerie);
 });
 
-test('Messpunkt antippen: bearbeiten und speichern; Zurück bricht ab; Löschen fragt nach', async () => {
+test('Messpunkt antippen: bearbeiten und speichern; Zurück und Abbrechen brechen ab; Löschen fragt nach', async () => {
   const back = backButton();
   const alert = rueckfrage();
   db.insertMesspunkt({ zeit: '2026-01-01T07:00:00.000Z', sys: 130, dia: 85, puls: 60 });
@@ -280,6 +280,12 @@ test('Messpunkt antippen: bearbeiten und speichern; Zurück bricht ab; Löschen 
   expect(screen.getByText('Messpunkt bearbeiten')).toBeOnTheScreen();
   await fireEvent.changeText(screen.getByLabelText('SYS'), '999');
   await back();
+  expect(db.listMessungen()[0].sys).toBe(130);
+  await fireEvent.press(screen.getByText('1 Pkt.'));
+  await fireEvent.press(screen.getByLabelText(/^Messpunkt .*130\/85, Puls 60$/));
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '999');
+  await fireEvent.press(screen.getByLabelText('Abbrechen'));
+  expect(screen.queryByText('Messpunkt bearbeiten')).toBeNull();
   expect(db.listMessungen()[0].sys).toBe(130);
 
   await fireEvent.press(screen.getByText('1 Pkt.'));

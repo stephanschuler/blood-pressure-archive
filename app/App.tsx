@@ -155,6 +155,7 @@ function Main() {
           key={bearbeiten.id}
           punkt={bearbeiten}
           onSave={(p) => { updateMesspunkt(bearbeiten.id, p); setBearbeiten(null); setMessungen(listMessungen()); }}
+          onCancel={() => setBearbeiten(null)}
           onDelete={() => askDelete(bearbeiten)}
           c={c}
         />
@@ -225,7 +226,7 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
       werte={reading!.values}
       unsicher={reading!.uncertain}
       bild={foto.uri}
-      links={{ label: 'Verwerfen', onPress: onDone }}
+      links={[{ label: 'Verwerfen', icon: require('./assets/delete.png'), onPress: onDone }]}
       onSave={(w) => { insertMesspunkt({ zeit: zeit.toISOString(), ...w }); onDone(); }}
       c={c}
     >
@@ -246,14 +247,18 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
   );
 }
 
-// Abbrechen ist die Zurück-Taste (Main): für einen eigenen Knopf fehlt ein Symbol
-function Bearbeiten({ punkt, onSave, onDelete, c }: { punkt: Messpunkt; onSave: (p: Omit<Messpunkt, 'id'>) => void; onDelete: () => void; c: Colors }) {
+function Bearbeiten({ punkt, onSave, onCancel, onDelete, c }: {
+  punkt: Messpunkt; onSave: (p: Omit<Messpunkt, 'id'>) => void; onCancel: () => void; onDelete: () => void; c: Colors;
+}) {
   const [zeit, setZeit] = useState(() => new Date(punkt.zeit));
   return (
     <Werteingabe
       werte={[punkt.sys, punkt.dia, punkt.puls]}
       unsicher={[false, false, false]}
-      links={{ label: 'Löschen', onPress: onDelete }}
+      links={[
+        { label: 'Löschen', icon: require('./assets/delete.png'), onPress: onDelete },
+        { label: 'Abbrechen', icon: require('./assets/close.png'), onPress: onCancel },
+      ]}
       onSave={(w) => onSave({ zeit: zeit.toISOString(), ...w })}
       c={c}
     >
@@ -265,8 +270,10 @@ function Bearbeiten({ punkt, onSave, onDelete, c }: { punkt: Messpunkt; onSave: 
   );
 }
 
+type Knopf = { label: string; icon: number; onPress: () => void };
+
 function Werteingabe({ werte: anfang, unsicher, bild, links, onSave, c, children }: {
-  werte: Values; unsicher: boolean[]; bild?: string; links: { label: string; onPress: () => void }; onSave: (w: Werte) => void; c: Colors; children: ReactNode;
+  werte: Values; unsicher: boolean[]; bild?: string; links: Knopf[]; onSave: (w: Werte) => void; c: Colors; children: ReactNode;
 }) {
   const [werte, setWerte] = useState(anfang.map((v) => (v === null ? '' : String(v))));
   const [fokus, setFokus] = useState<number | null>(null);
@@ -351,7 +358,7 @@ function Werteingabe({ werte: anfang, unsicher, bild, links, onSave, c, children
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: 8, paddingTop: 8 }}>
-          <IconButton label={links.label} icon={require('./assets/delete.png')} onPress={links.onPress} />
+          {links.map((k) => <IconButton key={k.label} {...k} />)}
           <IconButton label="Speichern" icon={require('./assets/check.png')} onPress={speichern} disabled={!gueltig} />
         </View>
       </View>

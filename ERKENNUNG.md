@@ -509,7 +509,8 @@ Messrichtung quer dazu fest.
   Plausibilitätsprüfung). Ein Feld ist sicher, wenn mindestens eine Kette dort denselben Wert
   liefert, sonst unsicher.
 - **Rückweisung:** kein plausibles Tripel oder Widerspruch → alle drei Felder `null`. Eine
-  Ausnahme in der Runtime fängt `useQueue` (`src/queue.ts`) ab und liefert ebenfalls drei leere Felder.
+  Ausnahme in der Runtime fängt `useQueue` (`src/queue.ts`) ab und liefert ebenfalls drei leere
+  Felder; die Seitenleiste zeigt den letzten Fehler („Erkennung gescheitert: …“).
 - **In der App:** unsichere und leere Felder gelb hinterlegt; gespeichert wird erst nach
   Bestätigung durch den Nutzer.
 

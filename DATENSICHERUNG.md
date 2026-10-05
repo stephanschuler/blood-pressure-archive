@@ -29,6 +29,9 @@
 - **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), In Google Drive ablegen
   (`add_to_drive`).
 - **Fuß:** die Version, wie Android sie meldet (`0.0.1-3815a01`); ohne APK-Build „Entwicklung“.
+  Darüber die Laufzeiten der Erkennung und, falls sie seit App-Start gescheitert ist, in Rot der
+  letzte Grund („Erkennung gescheitert: …“). Sonst sähe ein Ausfall, etwa der Worklet-Runtime nach
+  einem Update, nur wie schlechtes Lesen aus.
 - Icons aus den Material Symbols, wie die vorhandenen Knöpfe.
 - Auch bei leerer App erreichbar: Auf einem neuen Handy ist Einspielen der erste Schritt.
 

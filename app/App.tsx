@@ -10,7 +10,7 @@ import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datens
 import type { Values } from './src/erkennung/segments';
 import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
 import type { Messpunkt } from './src/messung';
-import { useQueue, type Offen } from './src/queue';
+import { erkennungsfehler, useQueue, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Startseite } from './src/startseite';
 import { csv, xlsx } from './src/tabelle';
@@ -184,7 +184,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} messzeit={messzeit()} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
       <StatusBar style="auto" />
     </View>
   );

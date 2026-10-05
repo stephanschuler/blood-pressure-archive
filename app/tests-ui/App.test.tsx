@@ -54,6 +54,20 @@ test('beim Start liegengebliebene Aufnahme: gleich zur Bestätigung', async () =
   expect(screen.getByText('Foto 1 von 1')).toBeOnTheScreen();
 });
 
+test('Erkennung gescheitert: Feld leer, Grund in der Seitenleiste', async () => {
+  foto.takePhoto.mockResolvedValue([FOTO]);
+  foto.recognize.mockRejectedValue(new Error('Runtime weg'));
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Foto aufnehmen'));
+  expect(await screen.findByText('Foto 1 von 1')).toBeOnTheScreen();
+  await fireEvent.changeText(screen.getByLabelText('SYS'), '128');
+  await fireEvent.changeText(screen.getByLabelText('DIA'), '85');
+  await fireEvent.changeText(screen.getByLabelText('PUL'), '64');
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  expect(screen.getByText('Erkennung gescheitert: Error: Runtime weg')).toBeOnTheScreen();
+});
+
 test('leerer Start: Hinweis und Knöpfe', async () => {
   await render(<App />);
   expect(screen.getByText('Noch keine Messungen.')).toBeOnTheScreen();

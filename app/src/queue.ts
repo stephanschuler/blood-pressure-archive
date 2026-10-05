@@ -10,6 +10,10 @@ export type Offen = { foto: Foto; reading: Reading | null };
 const bekannt = (foto: Foto, { values: [sys, dia, puls] }: Reading) =>
   sys !== null && dia !== null && puls !== null && hasMesspunkt({ zeit: foto.zeit.toISOString(), sys, dia, puls });
 
+let fehler: string | null = null;
+/** Letzter Fehler der Erkennung seit App-Start: sonst sähe ein Ausfall nur wie schlechtes Lesen aus. */
+export const erkennungsfehler = () => fehler;
+
 /** Erkennt alle Fotos sofort und legt sie nacheinander zur Bestätigung vor; onDone nach jedem erledigten. */
 export function useQueue(onDone: () => void) {
   const [queue, setQueue] = useState<Foto[]>([]);
@@ -22,7 +26,10 @@ export function useQueue(onDone: () => void) {
   const recognizeOnce = (foto: Foto) => {
     let p = readings.current.get(foto);
     if (!p) {
-      p = recognize(foto).catch(() => ({ values: [null, null, null], uncertain: [false, false, false] }));
+      p = recognize(foto).catch((e) => {
+        fehler = String(e);
+        return { values: [null, null, null], uncertain: [false, false, false] };
+      });
       readings.current.set(foto, p);
       p.then(() => setErkannt((s) => new Set(s).add(foto)));
     }

@@ -117,6 +117,7 @@ export function Startseite({ messungen, auswahl, raster, c, onEdit, onDelete }: 
         <SectionList
           ref={liste}
           style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           sections={abschnitte}
           stickySectionHeadersEnabled

@@ -11,7 +11,7 @@ import type { Values } from './src/erkennung/segments';
 import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
 import { parseRaster, type Raster } from './src/raster';
 import type { Messpunkt } from './src/messung';
-import { erkennungsfehler, useQueue, type Offen } from './src/queue';
+import { erkennungsfehler, useQueue, type Bilanz, type Offen } from './src/queue';
 import { Seitenleiste, type Eintrag } from './src/seitenleiste';
 import { Kopf, Startseite } from './src/startseite';
 import { csv, xlsx } from './src/tabelle';
@@ -44,7 +44,7 @@ function Main() {
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
   // 'neu': Eingabe von Hand, ohne Foto
   const [bearbeiten, setBearbeiten] = useState<Messpunkt | 'neu' | null>(null);
-  const { offen, nr, gesamt, bereit, next, enqueue } = useQueue(() => setMessungen(listMessungen()));
+  const { offen, nr, gesamt, bereit, next, enqueue, importBilanz, quittieren } = useQueue(() => setMessungen(listMessungen()));
 
   useEffect(() => {
     pendingPhotos().then((fotos) => fotos.length && enqueue(fotos));
@@ -59,9 +59,9 @@ function Main() {
       else if (offen!.foto.temporaer) {
         Alert.alert('Aufnahme verwerfen?', 'Das Foto wird gelöscht, die Werte werden nicht gespeichert.', [
           { text: 'Abbrechen', style: 'cancel' },
-          { text: 'Verwerfen', style: 'destructive', onPress: next },
+          { text: 'Verwerfen', style: 'destructive', onPress: () => next('verworfen') },
         ]);
-      } else next();
+      } else next('verworfen');
       return true;
     });
     return () => sub.remove();
@@ -201,6 +201,7 @@ function Main() {
         <IconButton label="Fotos importieren" icon={require('./assets/add-photo-alternate.png')} onPress={async () => enqueue(await importPhotos())} />
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
+      {importBilanz && <Importmeldung bilanz={importBilanz} onClose={quittieren} unten={insets.bottom + 84} c={c} />}
       <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} akzent={akzent} onAkzent={waehleAkzent} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
       <StatusBar style="auto" />
     </View>
@@ -234,7 +235,9 @@ function Zeit({ zeit, onChange, c }: { zeit: Date; onChange: (d: Date) => void; 
   );
 }
 
-function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; nr: number; gesamt: number; bereit: number; onDone: () => void; c: Colors }) {
+function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: {
+  offen: Offen; nr: number; gesamt: number; bereit: number; onDone: (ausgang: 'uebernommen' | 'verworfen') => void; c: Colors;
+}) {
   const { foto, reading } = offen;
   const [zeit, setZeit] = useState(foto.zeit);
   return (
@@ -242,8 +245,8 @@ function Bestaetigung({ offen, nr, gesamt, bereit, onDone, c }: { offen: Offen; 
       werte={reading!.values}
       unsicher={reading!.uncertain}
       bild={foto.uri}
-      links={[{ label: 'Verwerfen', icon: require('./assets/delete.png'), onPress: onDone }]}
-      onSave={(w) => { insertMesspunkt({ zeit: zeit.toISOString(), ...w }); onDone(); }}
+      links={[{ label: 'Verwerfen', icon: require('./assets/delete.png'), onPress: () => onDone('verworfen') }]}
+      onSave={(w) => { insertMesspunkt({ zeit: zeit.toISOString(), ...w }); onDone('uebernommen'); }}
       c={c}
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -389,6 +392,42 @@ function IconButton({ label, icon, onPress, disabled }: { label: string; icon: n
         <Image source={icon} style={{ width: 32, height: 32, tintColor: '#fff' }} />
       </Pressable>
     </View>
+  );
+}
+
+const BILANZ: [keyof Bilanz, string][] = [['uebernommen', 'übernommen'], ['schonDa', 'schon da'], ['verworfen', 'verworfen']];
+
+/** Snackbar nach einem Import; Zähler ohne Treffer entfallen. */
+function Importmeldung({ bilanz, onClose, unten, c }: { bilanz: Bilanz; onClose: () => void; unten: number; c: Colors }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(t, { toValue: 1, duration: 250, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    const zu = setTimeout(onClose, 8000);
+    return () => clearTimeout(zu);
+  }, []);
+  return (
+    <Animated.View
+      accessibilityLiveRegion="polite"
+      style={{
+        position: 'absolute', left: 12, right: 12, bottom: unten, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10,
+        paddingVertical: 6, paddingLeft: 16, paddingRight: 8, borderRadius: 4, backgroundColor: c.tooltip, elevation: 6,
+        opacity: t, transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: c.tooltipText, fontSize: 14 }}>Import fertig</Text>
+        <View style={{ flexDirection: 'row', gap: 4, marginTop: 2 }}>
+          {BILANZ.filter(([k]) => bilanz[k]).map(([k, label]) => (
+            <View key={k} style={{ borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1, backgroundColor: `${c.tooltipText}24` }}>
+              <Text style={{ color: c.tooltipText, fontSize: 11, lineHeight: 16 }}>{bilanz[k]} {label}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <Pressable onPress={onClose} accessibilityRole="button" style={{ padding: 8 }}>
+        <Text style={{ color: c.tooltipAction, fontSize: 14, fontWeight: '600' }}>OK</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 

@@ -89,6 +89,7 @@ test('Foto aufnehmen, unsicheres Feld markiert, speichern, Messung in der Liste'
   expect(await screen.findByLabelText('1 Messpunkt')).toBeOnTheScreen();
   expect(screen.getAllByText('128').length).toBeGreaterThan(0);
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
+  expect(screen.queryByText('Import fertig')).toBeNull();
 });
 
 test('Speichern erst, wenn alle Felder gefüllt sind', async () => {
@@ -402,6 +403,33 @@ test('Import eines schon gespeicherten Messpunkts: ohne Bestätigung übersprung
   expect(screen.getByText('Foto 2 von 2')).toBeOnTheScreen();
   await fireEvent.press(screen.getByLabelText('Speichern'));
   expect(db.listMessungen().map((m) => m.punkte.length)).toEqual([1, 1]);
+});
+
+test('Import fertig: Snackbar zählt übernommen, schon da und verworfen getrennt; OK schließt', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  // das erste trägt Zeit und Werte des schon gespeicherten Messpunkts
+  const galerie = [7, 12, 19].map((h) => ({ ...FOTO, uri: `file:///cache/${h}.jpg`, zeit: new Date(Date.UTC(2026, 0, 1, h)), temporaer: false }));
+  foto.importPhotos.mockResolvedValue(galerie);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await screen.findByText('Foto 2 von 3');
+  await fireEvent.press(screen.getByLabelText('Speichern'));
+  await fireEvent.press(screen.getByLabelText('Verwerfen'));
+  expect(await screen.findByText('Import fertig')).toBeOnTheScreen();
+  for (const z of ['1 übernommen', '1 schon da', '1 verworfen']) expect(screen.getByText(z)).toBeOnTheScreen();
+  await fireEvent.press(screen.getByText('OK'));
+  expect(screen.queryByText('Import fertig')).toBeNull();
+});
+
+test('Import ohne Verwerfen: kein Zähler mit null', async () => {
+  foto.importPhotos.mockResolvedValue([{ ...FOTO, temporaer: false }]);
+  foto.recognize.mockResolvedValue({ values: [128, 85, 64], uncertain: [false, false, false] } as Reading);
+  await render(<App />);
+  await fireEvent.press(screen.getByLabelText('Fotos importieren'));
+  await fireEvent.press(await screen.findByLabelText('Speichern'));
+  expect(await screen.findByText('1 übernommen')).toBeOnTheScreen();
+  expect(screen.queryByText(/schon da|verworfen/)).toBeNull();
 });
 
 test('gleiche Zeit, andere erkannte Werte: Bestätigung wie gewohnt', async () => {

@@ -5,6 +5,9 @@ import type { Reading } from './erkennung/messwerte';
 import { discard, recognize, type Foto } from './foto';
 
 export type Offen = { foto: Foto; reading: Reading | null };
+/** Ausgang je Foto eines Durchgangs; schonDa: ohne Bestätigung übersprungen, siehe bekannt. */
+export type Bilanz = { uebernommen: number; schonDa: number; verworfen: number };
+const LEER: Bilanz = { uebernommen: 0, schonDa: 0, verworfen: 0 };
 
 /** Schon gespeichert, etwa bei einem zweiten Import desselben Fotos: keine Bestätigung nötig. */
 const bekannt = (foto: Foto, { values: [sys, dia, puls] }: Reading) =>
@@ -20,6 +23,9 @@ export function useQueue(onDone: () => void) {
   const [gesamt, setGesamt] = useState(0);
   const [offen, setOffen] = useState<Offen | null>(null);
   const [erkannt, setErkannt] = useState(new Set<Foto>());
+  const bilanz = useRef(LEER);
+  // nur nach einem Import aus der Galerie, nicht nach einer Aufnahme
+  const [importBilanz, setImportBilanz] = useState<Bilanz | null>(null);
   // Foto in Arbeit; ein Erkennungsergebnis für ein schon verworfenes Foto wird ignoriert
   const active = useRef<Foto | null>(null);
   const readings = useRef(new Map<Foto, Promise<Reading>>());
@@ -44,13 +50,15 @@ export function useQueue(onDone: () => void) {
     setOffen({ foto, reading: null });
     recognizeOnce(foto).then((reading) => {
       if (active.current !== foto) return;
-      if (bekannt(foto, reading)) drop(foto);
+      if (bekannt(foto, reading)) drop(foto, 'schonDa');
       else setOffen({ foto, reading });
     });
   }, [queue, offen]);
 
-  const drop = (foto: Foto) => {
+  const drop = (foto: Foto, ausgang: keyof Bilanz) => {
     discard(foto);
+    bilanz.current = { ...bilanz.current, [ausgang]: bilanz.current[ausgang] + 1 };
+    if (queue.length === 1 && !foto.temporaer) setImportBilanz(bilanz.current);
     readings.current.delete(foto);
     active.current = null;
     setOffen(null);
@@ -63,8 +71,12 @@ export function useQueue(onDone: () => void) {
     nr: gesamt - queue.length + 1,
     gesamt,
     bereit: queue.filter((f) => erkannt.has(f)).length,
-    next: () => offen && drop(offen.foto),
+    next: (ausgang: 'uebernommen' | 'verworfen') => offen && drop(offen.foto, ausgang),
+    importBilanz,
+    quittieren: () => setImportBilanz(null),
     enqueue: (fotos: Foto[]) => {
+      bilanz.current = LEER;
+      setImportBilanz(null);
       setGesamt(fotos.length);
       setErkannt(new Set());
       setQueue(fotos);

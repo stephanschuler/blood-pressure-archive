@@ -19,7 +19,7 @@ test('Erkennung scheitert: Foto mit leeren Feldern zur Bestätigung, nach next v
   await waitFor(() => expect(result.current.offen?.reading).toEqual({ values: [null, null, null], uncertain: [false, false, false] }));
   expect([result.current.nr, result.current.gesamt]).toEqual([1, 1]);
   expect(erkennungsfehler()).toBe('Error: kaputt');
-  await act(async () => { result.current.next(); });
+  await act(async () => { result.current.next('verworfen'); });
   expect(result.current.offen).toBeNull();
   expect(foto.discard).toHaveBeenCalledWith(FOTO);
   expect(onDone).toHaveBeenCalledTimes(1);

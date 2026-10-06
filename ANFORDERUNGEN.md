@@ -52,6 +52,8 @@ Messung. Jeder Messpunkt besteht aus:
   Messzeitpunkt stammt aus den Metadaten des Fotos (EXIF).
 - **Doppelter Import:** Gibt es einen Messpunkt mit denselben drei Werten zur selben Sekunde schon,
   entsteht kein zweiter. Liest die Erkennung genau diese Werte, entfällt die Bestätigung.
+- **Meldung nach dem Import:** Ist das letzte importierte Foto erledigt, nennt eine Snackbar getrennt,
+  wie viele übernommen, schon vorhanden und verworfen wurden. Nach einer Aufnahme kommt keine.
 
 ### Datenschutz
 

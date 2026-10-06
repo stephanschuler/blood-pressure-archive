@@ -112,9 +112,6 @@ export function Startseite({ messungen, auswahl, raster, c, onEdit, onDelete }: 
   return (
     <View style={{ flex: 1 }}>
       <Diagramm ms={ms} von={aeltester} heute={heute} bereich={bereich} c={c} />
-      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 1, borderColor: c.line }}>
-        {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
-      </View>
       {/* reicht bis an beide Bildschirmränder: App.tsx rückt um 16 ein; die Wochenkarte ragt über */}
       <View style={{ flex: 1, marginHorizontal: -16 }}>
         <SectionList
@@ -155,6 +152,10 @@ export function Startseite({ messungen, auswahl, raster, c, onEdit, onDelete }: 
             <Text style={{ color: '#fff', fontSize: 13 }}>{hinweis}</Text>
           </View>
         )}
+      </View>
+      {/* unter der Liste: darüber trennte der klebende Monatskopf ihn von den Spalten */}
+      <View style={{ flexDirection: 'row', gap: 6, paddingLeft: VOR_WERTEN + 6, paddingVertical: 4, borderBottomWidth: 2, borderColor: ROT }}>
+        {['SYS', 'DIA', 'PUL'].map((l) => <Text key={l} style={{ flex: 1, textAlign: 'right', fontSize: 11, color: c.sub }}>{l}</Text>)}
       </View>
     </View>
   );

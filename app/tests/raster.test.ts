@@ -12,7 +12,7 @@ const am = (tag: number, stunde = 8) => new Date(2026, 9, tag, stunde);
 
 // neueste zuerst: KW 41 mit Mi 7. (zwei Messungen) und Di 6. (eine mit drei Punkten), KW 40 mit So 4.
 const offen = m(am(6), 3);
-const abschnitte = gliedern([m(am(7, 20)), m(am(7)), offen, m(am(4))]);
+const abschnitte = gliedern([m(am(7, 20)), m(am(7)), offen, m(am(4))], am(12));
 
 test('Raster 52: jedes Element ein Vielfaches, der Monatsfuß zählt mit 0', () => {
   assert.deepEqual(lagen(abschnitte, MASSE[52], new Set(), 1).laenge, [52, 52, 104, 52, 52, 52, 0]);

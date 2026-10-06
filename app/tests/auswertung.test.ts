@@ -51,9 +51,9 @@ test('Kalenderwoche nach ISO 8601', () => {
   assert.equal(kalenderwoche(new Date(2027, 0, 1)), 53);
 });
 
-test('Gliederung: Monate, Wochenzeile nur einmal je Woche, Tage mit ihren Messungen', () => {
+test('Gliederung: Monate, Wochenzeile nur einmal je Woche und nicht für die laufende, Tage mit ihren Messungen', () => {
   const ms = [m(am(10, 1, 20), 140), m(am(10, 1, 7), 130), m(am(9, 30, 7), 120), m(am(9, 27, 7), 100)];
-  const g = gliedern(ms);
+  const g = gliedern(ms, am(10, 6));
   const art = (z: Woche | Tag) => (z.art === 'woche' ? `KW${z.kw}` : `${z.tag.getDate()}.:${z.messungen.length}`);
   assert.deepEqual(g.map((a) => [a.monat.getMonth() + 1, a.data.map(art)]), [
     [10, ['KW40', '1.:2']],
@@ -62,6 +62,7 @@ test('Gliederung: Monate, Wochenzeile nur einmal je Woche, Tage mit ihren Messun
   const kw40 = g[0].data[0] as Woche;
   assert.deepEqual([kw40.anzahl, kw40.mittel.sys, kw40.vorwoche!.sys], [3, 130, 100]);
   assert.equal((g[1].data[1] as Woche).vorwoche, null);
+  assert.deepEqual(gliedern(ms, am(10, 4)).map((a) => a.data.map(art)), [['1.:2'], ['30.:1', 'KW39', '27.:1']]);
 });
 
 test('Tag suchen: der Tag selbst, sonst der nächstältere, außerhalb der jüngste bzw. älteste', () => {

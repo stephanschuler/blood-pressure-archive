@@ -55,8 +55,9 @@ export type Abschnitt = { monat: Date; data: (Woche | Tag)[] };
 /**
  * Messungen (neueste zuerst) je Monat; vor dem neuesten Tag jeder Kalenderwoche ihre Wochenzeile.
  * Liegt ein Monatswechsel in der Woche, steht die Wochenzeile nur im neueren Monat.
+ * Die laufende Woche hat noch keine.
  */
-export function gliedern(ms: Messung[]): Abschnitt[] {
+export function gliedern(ms: Messung[], heute = new Date()): Abschnitt[] {
   const wochen = new Map<number, Messung[]>();
   for (const m of ms) {
     const k = montag(zeitpunkt(m)).getTime();
@@ -86,14 +87,14 @@ export function gliedern(ms: Messung[]): Abschnitt[] {
       abschnitte.push(abschnitt);
     }
     const von = montag(t);
-    if (von.getTime() !== woche) {
-      woche = von.getTime();
-      const dieser = wochen.get(woche)!;
+    if (von.getTime() !== woche && von.getTime() !== montag(heute).getTime()) {
+      const dieser = wochen.get(von.getTime())!;
       abschnitt.data.push({
         art: 'woche', kw: kalenderwoche(von), von, bis: tagesbeginn(von, -6), anzahl: dieser.length,
         mittel: mittel(dieser)!, vorwoche: mittel(wochen.get(tagesbeginn(von, 7).getTime()) ?? []),
       });
     }
+    woche = von.getTime();
     tag = { art: 'tag', tag: tagesbeginn(t), messungen: [m], vorige: [vorige.get(m) ?? null] };
     abschnitt.data.push(tag);
   }

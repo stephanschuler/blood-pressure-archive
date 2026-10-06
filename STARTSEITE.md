@@ -106,6 +106,8 @@ Vor dem ersten Tag jeder Kalenderwoche, nicht aufklappbar:
 Liegt ein Monatswechsel in der Woche, steht die Wochenzeile nur einmal, beim neuesten Tag. Der
 Monatskopf folgt dann zwischen den Tagen.
 
+Die laufende Woche hat noch keine Wochenzeile; sie erscheint mit dem Montag danach.
+
 ### 7. Tag
 
 Links ein **Kalenderblatt** (36 dp breit): oben auf rotem Streifen der Wochentag (`So`), darunter

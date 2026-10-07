@@ -12,7 +12,7 @@ Stand: Oktober 2026. Anforderungen: [ANFORDERUNGEN.md](ANFORDERUNGEN.md).
 | Test               | APK von Hand aufs Handy; nativer Android-Emulator auf dem Mac         |
 | Kamera / Import    | `expo-image-picker` (`exif: true`); ohne EXIF-Zeit gilt „jetzt"       |
 | Datenbank          | `expo-sqlite`, synchron; Migrationen als SQL-Liste, Stand in `user_version` |
-| Export             | CSV und XLSX von Hand (`fflate` zippt), SQLite per `serializeSync()`  |
+| Export             | CSV und XLSX von Hand (`fflate` zippt), PDF per `expo-print`, SQLite per `serializeSync()` |
 | Teilen / Drive     | System-Share-Sheet (`expo-sharing`); direkte Drive-API erst bei Bedarf |
 | Texterkennung      | on-device, eigene Segment-Erkennung, ohne trainiertes Modell; **kein** Online-Dienst, **keine** generische OCR |
 
@@ -406,6 +406,9 @@ beim App-Start ein, je Migration eine Transaktion. Nur anhängen, nie ändern.
 - **CSV:** wenige Zeilen eigener Code.
 - **XLSX:** von Hand in `app/src/tabelle.ts`: OOXML-Teile als Text, gezippt mit `fflate`. Zwei
   Blätter und zwei Zahlenformate brauchen keine Bibliothek.
+- **PDF:** HTML aus `app/src/bericht.ts`, gedruckt mit `expo-print` (Druckdienst von Android über
+  die WebView). Von Hand ohne Bibliothek ginge es auch, Seitenumbruch, Tabellensatz und Diagramm
+  wären dann aber eigene PDF-Befehle; `pdf-lib`/jsPDF sparten gegenüber Hand kaum Code.
 - **Android-Backup:** `allowBackup: true` in `app/app.json`, ausdrücklich gewählt (5.10.2026). Die
   Datenbank geht ins Google-Backup des Handys, sofern dort eingeschaltet; ab Android 9 mit
   Displaysperre Ende-zu-Ende-verschlüsselt. Ergänzt die Sicherung von Hand, ersetzt sie nicht.

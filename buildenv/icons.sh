@@ -27,3 +27,4 @@ png upload-file                72   72 upload-file.png
 png csv                        72   72 csv.png
 png table-view                 72   72 table-view.png
 png share                      72   72 share.png
+png picture-as-pdf             72   72 picture-as-pdf.png

@@ -8,6 +8,7 @@ import type { Foto } from '../src/foto';
 
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Directory, File } from 'expo-file-system';
+import { printToFileAsync } from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 
 import App from '../App';
@@ -29,10 +30,11 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), pendingPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn(), messzeit: () => null }));
 jest.mock('expo-file-system', () => ({
   Directory: { pickDirectoryAsync: jest.fn() },
-  File: Object.assign(jest.fn(() => ({ uri: 'file:///cache/datei', create: jest.fn(), write: jest.fn() })), { pickFileAsync: jest.fn() }),
+  File: Object.assign(jest.fn(() => ({ uri: 'file:///cache/datei', create: jest.fn(), write: jest.fn(), bytes: async () => new Uint8Array([37]), delete: jest.fn() })), { pickFileAsync: jest.fn() }),
   Paths: { cache: 'cache' },
 }));
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }));
+jest.mock('expo-print', () => ({ printToFileAsync: jest.fn(async () => ({ uri: 'file:///cache/druck.pdf' })) }));
 jest.mock('@react-native-community/datetimepicker', () => ({ DateTimePickerAndroid: { open: jest.fn() } }));
 
 const foto = fotoModule as jest.Mocked<typeof fotoModule>;
@@ -175,7 +177,7 @@ test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   expect(db.getSetting('theme')).toBe('dark');
   expect(screen.getByRole('button', { name: 'Dunkel', selected: true })).toBeOnTheScreen();
   expect(screen.getByText('Version Entwicklung')).toBeOnTheScreen();
-  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'Als XLSX speichern', 'Als XLSX teilen']) {
+  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'Als XLSX speichern', 'Als XLSX teilen', 'Als PDF speichern']) {
     expect(screen.getByRole('button', { name })).toBeOnTheScreen();
   }
 });
@@ -676,4 +678,16 @@ test('Tabelle: CSV und XLSX in den Ordner, XLSX ins Teilen-Blatt', async () => {
   await menue('Als XLSX teilen');
   await waitFor(() => expect(shareAsync).toHaveBeenCalledWith('file:///cache/datei', expect.objectContaining({ mimeType: expect.stringContaining('spreadsheetml') })));
   expect((File as unknown as jest.Mock).mock.calls.at(-1)).toEqual(['cache', expect.stringMatching(/^blutdruck-\d{4}-\d\d-\d\d\.xlsx$/)]);
+});
+
+test('Bericht: PDF über den Druckdienst in den Ordner', async () => {
+  db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const { createFile, write } = ordner();
+  await render(<App />);
+  await menue('Als PDF speichern');
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Gespeichert', '1 Messpunkte.'));
+  expect((printToFileAsync as jest.Mock).mock.calls[0][0].html).toContain('128/85');
+  expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.pdf$/), 'application/pdf');
+  expect(write).toHaveBeenLastCalledWith(new Uint8Array([37]));
 });

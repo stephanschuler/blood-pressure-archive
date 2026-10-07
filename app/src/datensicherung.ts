@@ -1,5 +1,6 @@
-// Dateien über die Dialoge von Android: Ordner zum Speichern, Datei zum Einspielen, Teilen-Blatt.
+// Dateien über die Dialoge von Android: Ordner zum Speichern, Datei zum Einspielen, Teilen-Blatt; PDF über den Druckdienst.
 import { Directory, File, Paths } from 'expo-file-system';
+import { printToFileAsync } from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 
 const p2 = (n: number) => String(n).padStart(2, '0');
@@ -31,4 +32,15 @@ export async function teilen(name: string, mime: string, inhalt: string | Uint8A
   datei.create({ overwrite: true });
   datei.write(inhalt);
   await shareAsync(datei.uri, { mimeType: mime, dialogTitle: name });
+}
+
+/** HTML als PDF in A4; die Druckdatei im Cache wird gleich wieder gelöscht. */
+export async function pdf(html: string): Promise<Uint8Array> {
+  const { uri } = await printToFileAsync({ html, width: 595, height: 842 }); // 72 Pixel je Zoll
+  const datei = new File(uri);
+  try {
+    return await datei.bytes();
+  } finally {
+    datei.delete();
+  }
 }

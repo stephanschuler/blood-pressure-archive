@@ -16,6 +16,8 @@
 │ ▦ Als CSV speichern   │░░░░░░░░░░░░░░│
 │ ▦ Als XLSX speichern  │░░░░░░░░░░░░░░│
 │ ⋖ Als XLSX teilen     │░░░░░░░░░░░░░░│
+│ Bericht               │░░░░░░░░░░░░░░│
+│ ▤ Als PDF speichern   │░░░░░░░░░░░░░░│
 │ Version 0.0.1-3815a01 │░░░░░░░░░░░░░░│
 └───────────────────────┴──────────────┘
 ```
@@ -32,6 +34,7 @@
 - **Datensicherung:** Speichern (`download`), Einspielen (`upload_file`).
 - **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), Als XLSX teilen
   (`share`).
+- **Bericht:** Als PDF speichern (`picture_as_pdf`).
 - **Fuß:** die Version, wie Android sie meldet (`0.0.1-3815a01`); ohne APK-Build „Entwicklung“.
   Darüber die Laufzeiten der Erkennung und, falls sie seit App-Start gescheitert ist, in Rot der
   letzte Grund („Erkennung gescheitert: …“). Sonst sähe ein Ausfall, etwa der Worklet-Runtime nach
@@ -83,3 +86,21 @@
 - **Als XLSX teilen:** Die XLSX geht in den Cache der App, und `expo-sharing` öffnet das
   Teilen-Blatt von Android, etwa „In Drive speichern“. Jede Ablage ist eine neue Datei. In
   Drive öffnet „Mit Google Sheets öffnen“ sie als Tabelle.
+
+## Bericht (PDF)
+
+- A4 hoch, zum Ausdrucken oder Weitergeben an die Ärztin oder den Arzt.
+- **Je Kalendermonat mit Messung eine Seite,** älteste zuerst.
+- **Überschrift:** Monat und Jahr („Oktober 2026“). Darunter die Mittel des Monats: gesamt,
+  vormittags, nachmittags.
+- **Diagramm des Monats:** je Tageshälfte SYS und DIA als Linien mit Band, wie auf der Startseite;
+  unten jeder Tag des Monats, Wochenende grau. Die Achse in 20er-Schritten ist auf allen Seiten
+  gleich, aus allen Werten, damit die Monate vergleichbar bleiben; 80 und 140 gestrichelt.
+- **Tabelle:** jeder Kalendertag des Monats, Tage ohne Messung leer. Je Tageshälfte SYS, DIA und
+  Puls in eigenen Spalten, das Mittel wie im XLSX-Blatt „Tagesmittel“.
+- **Platz:** Zeilenhöhe fest (`10pt/1.2`), damit 31 Tage auch mit anderer Schrift auf die Seite
+  passen. Geprüft mit Chromium: rund drei Zeilen Luft.
+- Farben der Tageshälften aus dem gewählten Akzent, helle Variante.
+- `app/src/bericht.ts` baut HTML ohne Expo-Importe, damit testbar; `expo-print` macht daraus das
+  PDF. Ränder per CSS `@page`: `expo-print` setzt auf Android keine.
+- **Als PDF speichern:** Ordnerwahl wie beim Sichern, Datei `blutdruck-JJJJ-MM-TT.pdf`.

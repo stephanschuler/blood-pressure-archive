@@ -68,6 +68,7 @@ Messung. Jeder Messpunkt besteht aus:
   ([DATENSICHERUNG.md](DATENSICHERUNG.md)).
 - **Tabelle:** CSV und Excel (XLSX) in einen Ordner; die XLSX über das Teilen-Blatt, etwa nach
   Google Drive.
+- **Bericht:** PDF, je Monat eine Seite mit Diagramm und Tagesmitteln, in einen Ordner.
 
 ### Später
 

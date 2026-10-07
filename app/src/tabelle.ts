@@ -1,7 +1,7 @@
 // CSV und XLSX für Google Sheets nach DATENSICHERUNG.md.
 import { strToU8, zipSync } from 'fflate';
 
-import { mittel } from './auswertung';
+import { halbtage, mittel } from './auswertung';
 import { gruppieren, type Messpunkt, type Messung } from './messung';
 
 const p2 = (n: number) => String(n).padStart(2, '0');
@@ -47,16 +47,9 @@ const werte = (ms: Messung[]) => {
 
 /** Je Tag eine Zeile mit den Mitteln der Messungen vor und ab 12 Uhr Ortszeit, wie auf der Startseite. */
 function tagesmittel(punkte: Messpunkt[]): Zelle[][] {
-  const tage = new Map<number, [Messung[], Messung[]]>();
-  for (const m of gruppieren(sortiert(punkte)).reverse()) {
-    const s = seriell(m.punkte[0].zeit);
-    const tag = Math.floor(s);
-    if (!tage.has(tag)) tage.set(tag, [[], []]);
-    tage.get(tag)![s - tag < 0.5 ? 0 : 1].push(m);
-  }
   return [
     ['Datum', 'SYS Vormittag', 'DIA Vormittag', 'Puls Vormittag', 'SYS Nachmittag', 'DIA Nachmittag', 'Puls Nachmittag'],
-    ...[...tage].map(([tag, [vm, nm]]): Zelle[] => [[tag, 2], ...werte(vm), ...werte(nm)]),
+    ...halbtage(gruppieren(sortiert(punkte))).map(([tag, vm, nm]): Zelle[] => [[seriell(tag.toISOString()), 2], ...werte(vm), ...werte(nm)]),
   ];
 }
 

@@ -6,7 +6,8 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { parseAuswahl, type Auswahl } from './src/auswertung';
 import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen, migrate, setSetting, sichern, updateMesspunkt, zaehlen, type Messung } from './src/db';
-import { dateiOeffnen, dateiname, inOrdnerSpeichern, teilen } from './src/datensicherung';
+import { bericht } from './src/bericht';
+import { dateiOeffnen, dateiname, inOrdnerSpeichern, pdf, teilen } from './src/datensicherung';
 import type { Values } from './src/erkennung/segments';
 import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
 import { parseRaster, type Raster } from './src/raster';
@@ -140,6 +141,12 @@ function Main() {
     {
       abschnitt: 'Tabelle', label: 'Als XLSX teilen', icon: require('./assets/share.png'),
       onPress: versuchen('Nicht geteilt', () => teilen(dateiname('xlsx'), XLSX, xlsx(punkte()))),
+    },
+    {
+      abschnitt: 'Bericht', label: 'Als PDF speichern', icon: require('./assets/picture-as-pdf.png'),
+      onPress: versuchen('Nicht gespeichert', async () => {
+        if (await inOrdnerSpeichern(dateiname('pdf'), 'application/pdf', await pdf(bericht(punkte(), AKZENT_FARBEN[akzent].light)))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
+      }),
     },
   ];
 

@@ -31,6 +31,17 @@ export function mittel(ms: Messung[]): Werte | null {
   return { sys: avg('sys'), dia: avg('dia'), puls: avg('puls') };
 }
 
+/** Messungen (neueste zuerst) je Kalendertag mit Messung, geteilt in die Tageshälften; älteste zuerst. */
+export function halbtage(ms: Messung[]): [tag: Date, vormittag: Messung[], nachmittag: Messung[]][] {
+  const tage = new Map<number, [Date, Messung[], Messung[]]>();
+  for (const m of [...ms].reverse()) {
+    const tag = tagesbeginn(zeitpunkt(m));
+    if (!tage.has(tag.getTime())) tage.set(tag.getTime(), [tag, [], []]);
+    tage.get(tag.getTime())![tageshaelfte(m) === 'vormittag' ? 1 : 2].push(m);
+  }
+  return [...tage.values()];
+}
+
 /** Kalendertage, die das Diagramm zeigt und über die die Kennzahl mittelt. */
 export const TAGE = 21;
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { filtern, gliedern, kalenderwoche, mittel, parseAuswahl, siebenTage, tageshaelfte, tagSuchen, type Tag, type Woche } from '../src/auswertung';
+import { filtern, gliedern, kalenderwoche, mittel, parseAuswahl, TAGE, tageshaelfte, tagSuchen, type Tag, type Woche, zeitraum } from '../src/auswertung';
 import type { Messung } from '../src/messung';
 
 let id = 0;
@@ -29,19 +29,18 @@ test('Mittel: jede Messung zählt gleich, gerundet', () => {
   assert.equal(mittel([]), null);
 });
 
-test('Ø 7 Tage: heute und sechs Tage davor, Vorwoche die sieben Tage davor', () => {
+test('Ø Zeitraum: heute und die TAGE - 1 Tage davor', () => {
   const heute = am(10, 4, 9);
+  const erster = am(10, 4 - (TAGE - 1), 0, 0);
   const ms = [
     m(am(10, 4, 23, 59), 150), // später am selben Tag zählt mit
-    m(am(9, 28, 0, 0), 130),
-    m(am(9, 27, 23, 59), 110),
-    m(am(9, 21, 0, 0), 100),
-    m(am(9, 20, 23, 59), 90),
+    m(erster, 130),
+    m(new Date(erster.getTime() - 60e3), 110),
   ];
-  const s = siebenTage(ms, heute);
+  const s = zeitraum(ms, heute);
   assert.deepEqual(s.messungen.map((x) => x.sys), [150, 130]);
   assert.equal(s.mittel!.sys, 140);
-  assert.equal(siebenTage([], heute).mittel, null);
+  assert.equal(zeitraum([], heute).mittel, null);
 });
 
 test('Kalenderwoche nach ISO 8601', () => {

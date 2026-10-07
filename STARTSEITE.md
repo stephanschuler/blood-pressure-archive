@@ -7,7 +7,8 @@
   Werte sind die gerundeten Mittel der Messpunkte.
 - **Vormittag / Nachmittag:** Eine Messung gehört zum Vormittag, wenn ihr Zeitpunkt vor 12:00 Uhr
   Ortszeit liegt, sonst zum Nachmittag.
-- **Ø 7 Tage:** Mittel über alle Messungen von heute und den sechs Kalendertagen davor. Jede
+- **Ø Zeitraum:** Mittel über alle Messungen der Tage, die das Diagramm zeigt (`TAGE` in
+  `app/src/auswertung.ts`, derzeit 21): heute und die Kalendertage davor. Jede
   Messung zählt gleich, egal wie viele Messpunkte sie hat.
 - **Kalenderwoche:** nach ISO 8601, Montag bis Sonntag.
 - **Trendpfeil:** zeigt die Differenz eines Werts zu einem Bezugswert, in mmHg bzw. Schlägen:
@@ -17,7 +18,7 @@
 
 ```
 ┌──────────────────────────────────────┐
-│ ☰ Blutdruck    ∅ 7-Tage:    │ [◔◕▾]  │  Titelzeile mit Kennzahl
+│ ☰ Blutdruck    ∅ 21 Tage:   │ [◔◕▾]  │  Titelzeile mit Kennzahl
 │                139/82, ♥73  │        │  und Tageshälfte
 ├──────────────────────────────────────┤
 │ ╱╲_╱╲  ╱‾╲_   ┊░░░░░░░│ 140          │  ┐ stehender Kopf,
@@ -58,20 +59,19 @@ Neustart der App erhalten, wie die Darstellung.
 
 ### 2. Kennzahl
 
-Mittig zwischen Titel und Strich, zweizeilig: oben klein `∅ 7-Tage:`, linksbündig über dem
+Mittig zwischen Titel und Strich, zweizeilig: oben klein `∅ 21 Tage:`, linksbündig über dem
 SYS-Wert, darunter `139/82, ♥73`. SYS rot, DIA blau, Puls kleiner: das ♥ in Herz-Rot, die Zahl grau.
 
-- SYS/DIA und Puls als Ø 7 Tage der gewählten Tageshälfte.
-- Keine Messung in den 7 Tagen: `–`.
+- SYS/DIA und Puls als Ø Zeitraum der gewählten Tageshälfte.
+- Keine Messung im Zeitraum: `–`.
 
 ### 3. Diagramm
 
-- **Zeitraum:** 21 Tage; er folgt der Liste. Die Tage, die in der Liste sichtbar sind, stehen in
+- **Zeitraum:** `TAGE` Tage, derzeit 21; er folgt der Liste. Die Tage, die in der Liste sichtbar sind, stehen in
   der Mitte, hellrot hinterlegt. Ganz oben endet er heute, ganz unten beginnt er am ältesten Tag.
-  Er folgt der Mitte der sichtbaren Tage, kurz animiert; über mehr als 21 Tage springt er.
+  Er folgt der Mitte der sichtbaren Tage, kurz animiert; über mehr als `TAGE` Tage springt er.
 - **Bänder:** je Tageshälfte eine blasse Fläche zwischen SYS- und DIA-Linie, Fläche und beide
   Linien in der Farbe der Tageshälfte; keine Punkte. Bei gefilterter Ansicht nur die gewählte Hälfte.
-- **Hinterlegt:** die 7 Tage der Kennzahl grau, beschriftet „Ø 7 Tage“.
 - **Raster:** gestrichelte Linien bei 80 und 140 mmHg, rechts beschriftet. Skala fest von 60 bis
   170 mmHg.
 - **Achse:** unten das Datum jedes Montags.

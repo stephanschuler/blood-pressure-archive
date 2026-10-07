@@ -31,9 +31,12 @@ export function mittel(ms: Messung[]): Werte | null {
   return { sys: avg('sys'), dia: avg('dia'), puls: avg('puls') };
 }
 
-/** Heute und die sechs Kalendertage davor. */
-export function siebenTage(ms: Messung[], heute: Date) {
-  const beginn = tagesbeginn(heute, 6);
+/** Kalendertage, die das Diagramm zeigt und über die die Kennzahl mittelt. */
+export const TAGE = 21;
+
+/** Heute und die `TAGE - 1` Kalendertage davor. */
+export function zeitraum(ms: Messung[], heute: Date) {
+  const beginn = tagesbeginn(heute, TAGE - 1);
   const messungen = zwischen(ms, beginn, tagesbeginn(heute, -1));
   return { messungen, mittel: mittel(messungen) };
 }

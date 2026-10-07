@@ -6,7 +6,7 @@ import { Animated, Easing, Modal, PanResponder, Platform, Pressable, SectionList
 import Svg, { Circle, G, Line, Path, Polygon, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
-  AUSWAHL, filtern, gliedern, siebenTage, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt,
+  AUSWAHL, filtern, gliedern, TAGE, tagesbeginn, tageshaelfte, tagSuchen, zeitpunkt, zeitraum,
   type Abschnitt, type Auswahl, type Tag, type Tageshaelfte, type Werte, type Woche,
 } from './auswertung';
 import type { Messpunkt, Messung } from './messung';
@@ -194,12 +194,12 @@ function Trend({ wert, bezug, c }: { wert: number; bezug?: number; c: Colors }) 
 
 /** Kennzahl und Auswahl der Tageshälfte; App.tsx setzt sie in die Titelzeile. */
 export function Kopf({ messungen, auswahl, onAuswahl, c }: { messungen: Messung[]; auswahl: Auswahl; onAuswahl: (a: Auswahl) => void; c: Colors }) {
-  const mittel = useMemo(() => siebenTage(filtern(messungen, auswahl), new Date()).mittel, [messungen, auswahl]);
+  const mittel = useMemo(() => zeitraum(filtern(messungen, auswahl), new Date()).mittel, [messungen, auswahl]);
   return (
     <>
       <View style={{ flex: 1, alignItems: 'center' }}>
         <View>
-          <Text style={{ fontSize: 10, color: c.sub }}>∅ 7-Tage:</Text>
+          <Text style={{ fontSize: 10, color: c.sub }}>∅ {TAGE} Tage:</Text>
           <Text style={{ fontSize: 16, fontWeight: '700', color: c.text }}>
             {mittel ? (
               <>
@@ -265,7 +265,6 @@ const LO = 60;
 const HI = 170;
 
 const TAG = 864e5;
-const TAGE = 21;
 const y = (v: number) => H - ((Math.min(Math.max(v, LO), HI) - LO) / (HI - LO)) * H;
 
 // react-native-svg zeichnet auf Android in eine Bitmap der vollen Fläche: die ganze Zeit als ein Svg sprengt sie
@@ -273,7 +272,7 @@ const Kachel = memo(function Kachel({ k, breite, children }: { k: number; breite
   return <Svg width={breite} height={H + 12} viewBox={`${k * breite} 0 ${breite} ${H + 12}`} style={{ position: 'absolute', left: k * breite }}>{children}</Svg>;
 });
 
-/** 21 Tage, die in der Liste sichtbaren in der Mitte; am Anfang und Ende der Zeit an den Rand gerückt. */
+/** `TAGE` Tage, die in der Liste sichtbaren in der Mitte; am Anfang und Ende der Zeit an den Rand gerückt. */
 function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; heute: Date; bereich: RefObject<Bereich | undefined>; c: Colors }) {
   const [breite, setBreite] = useState(0);
   const [sichtbar, setSichtbar] = useState<[number, number] | null>(null);
@@ -286,7 +285,6 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
 
   const bis = tagesbeginn(heute, -1).getTime();
   const anfang = Math.min(von?.getTime() ?? bis, bis - TAGE * TAG);
-  const x7 = tagesbeginn(heute, 6).getTime();
   const x = (t: number) => ((t - anfang) / TAG) * (breite / TAGE);
   const start = sichtbar ? Math.min(Math.max((sichtbar[0] + sichtbar[1] - TAGE * TAG) / 2, anfang), bis - TAGE * TAG) : bis - TAGE * TAG;
   const ziel = -x(start);
@@ -306,8 +304,6 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
     for (let d = new Date(anfang); d.getTime() < bis; d = tagesbeginn(d, -1)) if (d.getDay() === 1) montage.push(d);
     return (
       <>
-        <Rect x={x(x7)} y={0} width={x(bis) - x(x7)} height={H} fill={c.chip} />
-        <SvgText x={x(x7) + 3} y={9} fontSize={8} fill={c.sub}>Ø 7 Tage</SvgText>
         {[80, 140].map((v) => <Line key={v} x1={0} x2={x(bis)} y1={y(v)} y2={y(v)} stroke={c.line} strokeDasharray="3 3" />)}
         {montage.map((d) => <SvgText key={d.getTime()} x={x(d.getTime())} y={H + 10} fontSize={8} fill={c.sub}>{datum(d)}</SvgText>)}
         {(['vormittag', 'nachmittag'] as const).map((h) => {
@@ -323,7 +319,7 @@ function Diagramm({ ms, von, heute, bereich, c }: { ms: Messung[]; von?: Date; h
         })}
       </>
     );
-  }, [ms, anfang, bis, x7, breite, c]);
+  }, [ms, anfang, bis, breite, c]);
 
   // die Kacheln um den Ausschnitt, auch die, aus der die Animation kommt
   const kacheln: number[] = [];

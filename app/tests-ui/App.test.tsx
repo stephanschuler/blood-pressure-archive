@@ -175,7 +175,7 @@ test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   expect(db.getSetting('theme')).toBe('dark');
   expect(screen.getByRole('button', { name: 'Dunkel', selected: true })).toBeOnTheScreen();
   expect(screen.getByText('Version Entwicklung')).toBeOnTheScreen();
-  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'Als XLSX speichern', 'In Google Drive ablegen']) {
+  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'Als XLSX speichern', 'Als XLSX teilen']) {
     expect(screen.getByRole('button', { name })).toBeOnTheScreen();
   }
 });
@@ -673,7 +673,7 @@ test('Tabelle: CSV und XLSX in den Ordner, XLSX ins Teilen-Blatt', async () => {
   expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.xlsx$/), expect.stringContaining('spreadsheetml'));
   expect(write.mock.calls[1][0]).toBeInstanceOf(Uint8Array);
 
-  await menue('In Google Drive ablegen');
+  await menue('Als XLSX teilen');
   await waitFor(() => expect(shareAsync).toHaveBeenCalledWith('file:///cache/datei', expect.objectContaining({ mimeType: expect.stringContaining('spreadsheetml') })));
   expect((File as unknown as jest.Mock).mock.calls.at(-1)).toEqual(['cache', expect.stringMatching(/^blutdruck-\d{4}-\d\d-\d\d\.xlsx$/)]);
 });

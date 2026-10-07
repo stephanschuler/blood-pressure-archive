@@ -26,4 +26,4 @@ png download                   72   72 download.png
 png upload-file                72   72 upload-file.png
 png csv                        72   72 csv.png
 png table-view                 72   72 table-view.png
-png add-to-drive               72   72 add-to-drive.png
+png share                      72   72 share.png

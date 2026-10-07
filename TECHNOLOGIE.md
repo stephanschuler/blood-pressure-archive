@@ -410,6 +410,10 @@ beim App-Start ein, je Migration eine Transaktion. Nur anhängen, nie ändern.
   Datenbank geht ins Google-Backup des Handys, sofern dort eingeschaltet; ab Android 9 mit
   Displaysperre Ende-zu-Ende-verschlüsselt. Ergänzt die Sicherung von Hand, ersetzt sie nicht.
 - **Google Drive über das Share-Sheet:** Android bietet „In Drive speichern". Kein OAuth nötig.
+- **Ein Dialog für Gerät und Drive:** gibt es nur als Speichern-unter (`ACTION_CREATE_DOCUMENT`);
+  expo-file-system 57 bietet nur die Ordnerwahl (`ACTION_OPEN_DOCUMENT_TREE`), in der Drive
+  fehlt. Eigenes Kotlin-Modul verworfen (7.10.2026): Ordner und Teilen-Blatt bleiben getrennt,
+  der Button heißt ehrlich „Als XLSX teilen".
 - **Direkter Drive-Upload:** OAuth-Client in der Google Cloud Console, Scope `drive.file`, Consent
   Screen auf „In Produktion", sonst laufen die Tokens nach 7 Tagen ab. Lohnt erst für automatischen
   Sync.

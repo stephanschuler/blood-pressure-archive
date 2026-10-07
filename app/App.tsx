@@ -138,7 +138,7 @@ function Main() {
       }),
     },
     {
-      abschnitt: 'Tabelle', label: 'In Google Drive ablegen', icon: require('./assets/add-to-drive.png'),
+      abschnitt: 'Tabelle', label: 'Als XLSX teilen', icon: require('./assets/share.png'),
       onPress: versuchen('Nicht geteilt', () => teilen(dateiname('xlsx'), XLSX, xlsx(punkte()))),
     },
   ];

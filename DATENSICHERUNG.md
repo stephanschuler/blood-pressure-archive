@@ -15,7 +15,7 @@
 │ Tabelle               │░░░░░░░░░░░░░░│
 │ ▦ Als CSV speichern   │░░░░░░░░░░░░░░│
 │ ▦ Als XLSX speichern  │░░░░░░░░░░░░░░│
-│ △ In Google Drive …   │░░░░░░░░░░░░░░│
+│ ⋖ Als XLSX teilen     │░░░░░░░░░░░░░░│
 │ Version 0.0.1-3815a01 │░░░░░░░░░░░░░░│
 └───────────────────────┴──────────────┘
 ```
@@ -30,8 +30,8 @@
 - **Akzente:** Umschalter mit sechs Paletten für Vormittag und Nachmittag, je als diagonal
   geteilter Kreis ohne Text; Vorgabe „Zwei Grautöne“. Wirkt sofort und wird gespeichert. Paletten: `AKZENT_FARBEN` in `app/src/theme.ts`.
 - **Datensicherung:** Speichern (`download`), Einspielen (`upload_file`).
-- **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), In Google Drive ablegen
-  (`add_to_drive`).
+- **Tabelle:** Als CSV speichern (`csv`), Als XLSX speichern (`table_view`), Als XLSX teilen
+  (`share`).
 - **Fuß:** die Version, wie Android sie meldet (`0.0.1-3815a01`); ohne APK-Build „Entwicklung“.
   Darüber die Laufzeiten der Erkennung und, falls sie seit App-Start gescheitert ist, in Rot der
   letzte Grund („Erkennung gescheitert: …“). Sonst sähe ein Ausfall, etwa der Worklet-Runtime nach
@@ -80,6 +80,6 @@
   gerundete Mittel ihrer Messungen, jede Messung zählt gleich; Grenze 12 Uhr Ortszeit. Beides wie
   auf der Startseite. Hälfte ohne Messung: Zellen leer.
 - **Als XLSX speichern:** Ordnerwahl wie beim Sichern, Datei `blutdruck-JJJJ-MM-TT.xlsx`.
-- **In Google Drive ablegen:** Die XLSX geht in den Cache der App, und `expo-sharing` öffnet das
-  Teilen-Blatt von Android. Dort „In Drive speichern“ wählen. Jede Ablage ist eine neue Datei. In
+- **Als XLSX teilen:** Die XLSX geht in den Cache der App, und `expo-sharing` öffnet das
+  Teilen-Blatt von Android, etwa „In Drive speichern“. Jede Ablage ist eine neue Datei. In
   Drive öffnet „Mit Google Sheets öffnen“ sie als Tabelle.

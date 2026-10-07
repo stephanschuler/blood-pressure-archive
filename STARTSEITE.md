@@ -187,7 +187,7 @@ Halbkreis über einer Horizontlinie, die Sonne als gefüllter Punkt.
 - **Vormittag:** Sonne links auf dem Bogen, noch vor dem Mittag.
 - **Nachmittag:** Sonne rechts auf dem Bogen, nach dem Mittag.
 
-Ihre Farben wählt die Seitenleiste unter „Akzente“ (`DATENSICHERUNG.md`).
+Ihre Farben wählt die Seitenleiste unter „Aussehen“ › „Akzente“ (`DATENSICHERUNG.md`).
 
 Die Symbole stehen im Dropdown der Tageshälfte und in jeder Messungszeile.
 

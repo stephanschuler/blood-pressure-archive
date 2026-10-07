@@ -9,9 +9,9 @@ export function parseTheme(value: string | null): Theme {
 }
 
 export const COLORS = {
-  light: { bg: '#fff', text: '#111', mid: '#444', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0', erkannt: '#b5b5b5', focus: '#1a5fb4', tooltip: '#322F35', tooltipText: '#F5EFF7', tooltipAction: '#ffb3b8',
+  light: { bg: '#fff', text: '#111', mid: '#444', sub: '#666', line: '#ccc', field: '#fff', fieldLine: '#999', photo: '#eee', chip: '#f0f0f0', uncertain: '#fff3b0', erkannt: '#b5b5b5', focus: '#1a5fb4', tooltip: '#322F35', tooltipText: '#F5EFF7', tooltipAction: '#ffb3b8', focusText: '#fff', selected: '#d3e3fd',
     sys: '#c62828', dia: '#1f6feb', up: '#d32f2f', down: '#2e9d5b' },
-  dark: { bg: '#121212', text: '#eee', mid: '#ccc', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00', erkannt: '#6a6a6a', focus: '#78aeed', tooltip: '#E6E0E9', tooltipText: '#322F35', tooltipAction: '#b3261e',
+  dark: { bg: '#121212', text: '#eee', mid: '#ccc', sub: '#aaa', line: '#333', field: '#1e1e1e', fieldLine: '#666', photo: '#222', chip: '#2a2a2a', uncertain: '#5a4a00', erkannt: '#6a6a6a', focus: '#78aeed', tooltip: '#E6E0E9', tooltipText: '#322F35', tooltipAction: '#b3261e', focusText: '#0b1d33', selected: '#1f3a5c',
     sys: '#ef6b6b', dia: '#58a6ff', up: '#ef5350', down: '#4cc27a' },
 };
 

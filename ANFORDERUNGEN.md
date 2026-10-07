@@ -66,9 +66,9 @@ Messung. Jeder Messpunkt besteht aus:
 - Lokale Datenbank in der App.
 - **Datensicherung:** die SQLite-Datei sichern und wieder einspielen
   ([DATENSICHERUNG.md](DATENSICHERUNG.md)).
-- **Tabelle:** CSV und Excel (XLSX) in einen Ordner; die XLSX über das Teilen-Blatt, etwa nach
-  Google Drive.
-- **Bericht:** PDF, je Monat eine Seite mit Diagramm und Tagesmitteln, in einen Ordner.
+- **Export:** CSV, Excel (XLSX: erst Tagesmittel je Tageshälfte, dann alle Einzelmessungen) oder
+  Bericht als PDF (je Monat eine Seite mit Diagramm und Tagesmitteln); jedes Format in einen Ordner
+  oder über das Teilen-Blatt, etwa nach Google Drive.
 
 ### Später
 

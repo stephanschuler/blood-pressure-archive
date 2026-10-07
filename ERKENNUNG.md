@@ -510,7 +510,7 @@ Messrichtung quer dazu fest.
   liefert, sonst unsicher.
 - **Rückweisung:** kein plausibles Tripel oder Widerspruch → alle drei Felder `null`. Eine
   Ausnahme in der Runtime fängt `useQueue` (`src/queue.ts`) ab und liefert ebenfalls drei leere
-  Felder; die Seitenleiste zeigt den letzten Fehler („Erkennung gescheitert: …“).
+  Felder; ein Warnzeichen unten in der Seitenleiste zeigt den letzten Fehler.
 - **In der App:** unsichere und leere Felder gelb hinterlegt; gespeichert wird erst nach
   Bestätigung durch den Nutzer.
 

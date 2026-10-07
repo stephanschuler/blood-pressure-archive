@@ -416,7 +416,7 @@ beim App-Start ein, je Migration eine Transaktion. Nur anhängen, nie ändern.
 - **Ein Dialog für Gerät und Drive:** gibt es nur als Speichern-unter (`ACTION_CREATE_DOCUMENT`);
   expo-file-system 57 bietet nur die Ordnerwahl (`ACTION_OPEN_DOCUMENT_TREE`), in der Drive
   fehlt. Eigenes Kotlin-Modul verworfen (7.10.2026): Ordner und Teilen-Blatt bleiben getrennt,
-  der Button heißt ehrlich „Als XLSX teilen".
+  als Ziel „Ordner“ oder „Teilen“ beim Export.
 - **Direkter Drive-Upload:** OAuth-Client in der Google Cloud Console, Scope `drive.file`, Consent
   Screen auf „In Produktion", sonst laufen die Tokens nach 7 Tagen ab. Lohnt erst für automatischen
   Sync.

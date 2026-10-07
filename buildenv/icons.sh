@@ -28,3 +28,7 @@ png csv                        72   72 csv.png
 png table-view                 72   72 table-view.png
 png share                      72   72 share.png
 png picture-as-pdf             72   72 picture-as-pdf.png
+png palette                    72   72 palette.png
+png backup                     72   72 backup.png
+png folder                     72   72 folder.png
+png error                      72   72 error.png

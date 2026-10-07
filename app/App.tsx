@@ -9,7 +9,8 @@ import { deleteMesspunkt, einspielen, getSetting, insertMesspunkt, listMessungen
 import { bericht } from './src/bericht';
 import { dateiOeffnen, dateiname, inOrdnerSpeichern, pdf, teilen } from './src/datensicherung';
 import type { Values } from './src/erkennung/segments';
-import { importPhotos, messzeit, pendingPhotos, takePhoto } from './src/foto';
+import { exportiert as exportWert, parseFormat, parseZiel, type Format, type Ziel } from './src/export';
+import { importPhotos, pendingPhotos, takePhoto } from './src/foto';
 import { parseRaster, type Raster } from './src/raster';
 import type { Messpunkt } from './src/messung';
 import { erkennungsfehler, useQueue, type Bilanz, type Offen } from './src/queue';
@@ -43,6 +44,9 @@ function Main() {
   const [raster, setRaster] = useState(() => parseRaster(getSetting('raster')));
   const [menue, setMenue] = useState(false);
   const [gesichert, setGesichert] = useState(() => getSetting('gesichert'));
+  const [format, setFormat] = useState(() => parseFormat(getSetting('exportformat')));
+  const [ziel, setZiel] = useState(() => parseZiel(getSetting('exportziel')));
+  const [exportiert, setExportiert] = useState(() => getSetting('exportiert'));
   // 'neu': Eingabe von Hand, ohne Foto
   const [bearbeiten, setBearbeiten] = useState<Messpunkt | 'neu' | null>(null);
   const { offen, nr, gesamt, bereit, next, enqueue, importBilanz, quittieren } = useQueue(() => setMessungen(listMessungen()));
@@ -81,6 +85,14 @@ function Main() {
     setSetting('akzent', a);
     setAkzent(a);
   };
+  const waehleFormat = (f: Format) => {
+    setSetting('exportformat', f);
+    setFormat(f);
+  };
+  const waehleZiel = (z: Ziel) => {
+    setSetting('exportziel', z);
+    setZiel(z);
+  };
   const waehleAuswahl = (a: Auswahl) => {
     setSetting('tageshaelfte', a);
     setAuswahl(a);
@@ -105,13 +117,10 @@ function Main() {
   });
   const gesichertAm = gesichert && new Date(gesichert).toLocaleDateString('de-DE');
   const sicherungFaellig = messungen.length > 0 && (!gesichert || Date.now() - Date.parse(gesichert) > SICHERUNG_FAELLIG_MS);
-  const eintraege: Eintrag[] = [
+  const sicherung: Eintrag[] = [
+    { label: 'Speichern', icon: require('./assets/download.png'), detail: gesichertAm ? `Zuletzt am ${gesichertAm}` : 'Noch nie gesichert', onPress: sicherungSpeichern },
     {
-      abschnitt: 'Datensicherung', label: 'Speichern', icon: require('./assets/download.png'),
-      detail: gesichertAm ? `Zuletzt am ${gesichertAm}` : 'Noch nie gesichert', onPress: sicherungSpeichern,
-    },
-    {
-      abschnitt: 'Datensicherung', label: 'Einspielen', icon: require('./assets/upload-file.png'),
+      label: 'Einspielen', icon: require('./assets/upload-file.png'),
       onPress: versuchen('Nicht eingespielt', async () => {
         const bytes = await dateiOeffnen();
         if (!bytes) return;
@@ -126,29 +135,18 @@ function Main() {
         Alert.alert('Eingespielt', `${r.gelesen} Messpunkte gelesen, ${r.neu} neu übernommen.`);
       }),
     },
-    {
-      abschnitt: 'Tabelle', label: 'Als CSV speichern', icon: require('./assets/csv.png'),
-      onPress: versuchen('Nicht gespeichert', async () => {
-        if (await inOrdnerSpeichern(dateiname('csv'), 'text/csv', csv(punkte()))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
-      }),
-    },
-    {
-      abschnitt: 'Tabelle', label: 'Als XLSX speichern', icon: require('./assets/table-view.png'),
-      onPress: versuchen('Nicht gespeichert', async () => {
-        if (await inOrdnerSpeichern(dateiname('xlsx'), XLSX, xlsx(punkte()))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
-      }),
-    },
-    {
-      abschnitt: 'Tabelle', label: 'Als XLSX teilen', icon: require('./assets/share.png'),
-      onPress: versuchen('Nicht geteilt', () => teilen(dateiname('xlsx'), XLSX, xlsx(punkte()))),
-    },
-    {
-      abschnitt: 'Bericht', label: 'Als PDF speichern', icon: require('./assets/picture-as-pdf.png'),
-      onPress: versuchen('Nicht gespeichert', async () => {
-        if (await inOrdnerSpeichern(dateiname('pdf'), 'application/pdf', await pdf(bericht(punkte(), AKZENT_FARBEN[akzent].light)))) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
-      }),
-    },
   ];
+  const exportieren = versuchen(ziel === 'teilen' ? 'Nicht geteilt' : 'Nicht gespeichert', async () => {
+    const [mime, inhalt]: [string, string | Uint8Array] = format === 'csv' ? ['text/csv', csv(punkte())]
+      : format === 'xlsx' ? [XLSX, xlsx(punkte())]
+        : ['application/pdf', await pdf(bericht(punkte(), AKZENT_FARBEN[akzent].light))];
+    if (ziel === 'teilen') await teilen(dateiname(format), mime, inhalt);
+    else if (await inOrdnerSpeichern(dateiname(format), mime, inhalt)) Alert.alert('Gespeichert', `${zaehlen()} Messpunkte.`);
+    else return;
+    const wert = exportWert(format, ziel);
+    setSetting('exportiert', wert);
+    setExportiert(wert);
+  });
 
   const screen = { flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8, paddingHorizontal: 16 };
 
@@ -209,7 +207,7 @@ function Main() {
         <IconButton label="Foto aufnehmen" icon={require('./assets/add-a-photo.png')} onPress={async () => enqueue(await takePhoto())} />
       </View>
       {importBilanz && <Importmeldung bilanz={importBilanz} onClose={quittieren} unten={insets.bottom + 84} c={c} />}
-      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} akzent={akzent} onAkzent={waehleAkzent} eintraege={eintraege} messzeit={messzeit()} fehler={erkennungsfehler()} c={c} />
+      <Seitenleiste offen={menue} onClose={() => setMenue(false)} theme={theme} onTheme={waehleTheme} raster={raster} onRaster={waehleRaster} akzent={akzent} onAkzent={waehleAkzent} sicherung={sicherung} format={format} onFormat={waehleFormat} ziel={ziel} onZiel={waehleZiel} onExport={exportieren} exportiert={exportiert} fehler={erkennungsfehler()} c={c} />
       <StatusBar style="auto" />
     </View>
   );

@@ -60,16 +60,16 @@ test('höchstens drei zugleich, Verkleinern nacheinander, freie Runtime an das n
   expect(new Set(mockLaeufe.map((l) => l.runtime)).size).toBe(3);
   expect(mockVerkleinern.max).toBe(1);
 
-  mockLaeufe[1].fertig({ reading: reading(122), dekodieren: 0, lesen: 0 });
+  mockLaeufe[1].fertig(reading(122));
   await expect(ergebnisse[1]).resolves.toEqual(reading(122));
   await warten();
   expect(mockLaeufe).toHaveLength(4);
   expect(mockLaeufe[3].runtime).toBe(mockLaeufe[1].runtime);
   expect(mockVerkleinern.reihenfolge).toEqual([1, 2, 3, 4].map((n) => foto(n).uri));
 
-  for (const l of mockLaeufe) l.fertig({ reading: reading(130), dekodieren: 0, lesen: 0 });
+  for (const l of mockLaeufe) l.fertig(reading(130));
   await warten();
-  mockLaeufe[4].fertig({ reading: reading(130), dekodieren: 0, lesen: 0 });
+  mockLaeufe[4].fertig(reading(130));
   await Promise.all(ergebnisse);
   expect(new Set(mockLaeufe.map((l) => l.runtime)).size).toBe(3);
   expect(mockVerkleinern.max).toBe(1);
@@ -87,7 +87,7 @@ test('Fehler beim Verkleinern oder Lesen geben die Runtime frei: das nächste Fo
   const fuenf = recognize(foto(5));
   await warten();
   expect(mockLaeufe).toHaveLength(4);
-  mockLaeufe[3].fertig({ reading: reading(140), dekodieren: 0, lesen: 0 });
+  mockLaeufe[3].fertig(reading(140));
   await expect(fuenf).resolves.toEqual(reading(140));
 });
 

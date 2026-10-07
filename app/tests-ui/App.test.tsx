@@ -27,7 +27,7 @@ jest.mock('expo-sqlite', () => ({
   }),
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), pendingPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn(), messzeit: () => null }));
+jest.mock('../src/foto', () => ({ takePhoto: jest.fn(), importPhotos: jest.fn(), pendingPhotos: jest.fn(), recognize: jest.fn(), discard: jest.fn() }));
 jest.mock('expo-file-system', () => ({
   Directory: { pickDirectoryAsync: jest.fn() },
   File: Object.assign(jest.fn(() => ({ uri: 'file:///cache/datei', create: jest.fn(), write: jest.fn(), bytes: async () => new Uint8Array([37]), delete: jest.fn() })), { pickFileAsync: jest.fn() }),
@@ -56,7 +56,8 @@ test('beim Start liegengebliebene Aufnahme: gleich zur Bestätigung', async () =
   expect(screen.getByText('Foto 1 von 1')).toBeOnTheScreen();
 });
 
-test('Erkennung gescheitert: Feld leer, Grund in der Seitenleiste', async () => {
+test('Erkennung gescheitert: Feld leer, Grund hinter dem Warnzeichen der Seitenleiste', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   foto.takePhoto.mockResolvedValue([FOTO]);
   foto.recognize.mockRejectedValue(new Error('Runtime weg'));
   await render(<App />);
@@ -67,7 +68,8 @@ test('Erkennung gescheitert: Feld leer, Grund in der Seitenleiste', async () => 
   await fireEvent.changeText(screen.getByLabelText('PUL'), '64');
   await fireEvent.press(screen.getByLabelText('Speichern'));
   await fireEvent.press(screen.getByLabelText('Menü'));
-  expect(screen.getByText('Erkennung gescheitert: Error: Runtime weg')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Erkennung gescheitert' }));
+  expect(alert).toHaveBeenCalledWith('Erkennung gescheitert', 'Error: Runtime weg');
 });
 
 test('leerer Start: Hinweis und Knöpfe', async () => {
@@ -167,7 +169,7 @@ test('Umschalter Tageshälfte filtert die Liste und wird gespeichert; Messung kl
   expect(screen.getAllByLabelText(/^Messpunkt/)).toHaveLength(2);
 });
 
-test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
+test('Seitenleiste: Darstellung wählen und speichern, Version, Seiten der Leiste', async () => {
   const set = jest.spyOn(Appearance, 'setColorScheme');
   await render(<App />);
   await fireEvent.press(screen.getByLabelText('Menü'));
@@ -176,10 +178,14 @@ test('Seitenleiste: Darstellung wählen und speichern, Version', async () => {
   expect(set).toHaveBeenLastCalledWith('dark');
   expect(db.getSetting('theme')).toBe('dark');
   expect(screen.getByRole('button', { name: 'Dunkel', selected: true })).toBeOnTheScreen();
-  expect(screen.getByText('Version Entwicklung')).toBeOnTheScreen();
-  for (const name of ['Speichern', 'Einspielen', 'Als CSV speichern', 'Als XLSX speichern', 'Als XLSX teilen', 'Als PDF speichern']) {
-    expect(screen.getByRole('button', { name })).toBeOnTheScreen();
-  }
+  expect(screen.getByText('Entwicklung')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('tab', { name: 'Sicherung' }));
+  for (const name of ['Speichern', 'Einspielen']) expect(screen.getByRole('button', { name })).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('tab', { name: 'Export' }));
+  expect(screen.getByRole('button', { name: 'XLSX', selected: true })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Ordner', selected: true })).toBeOnTheScreen();
+  for (const name of ['CSV', 'PDF', 'Teilen', 'Speichern']) expect(screen.getByRole('button', { name })).toBeOnTheScreen();
+  expect(screen.getByText('Noch nie exportiert')).toBeOnTheScreen();
 });
 
 test('Seitenleiste: Akzente wählen und speichern', async () => {
@@ -570,7 +576,18 @@ function ordner(write = jest.fn()) {
 /** Das Menü schließt sich mit jedem Eintrag. */
 async function menue(eintrag: string) {
   await fireEvent.press(screen.getByLabelText('Menü'));
+  await fireEvent.press(screen.getByRole('tab', { name: 'Sicherung' }));
   await fireEvent.press(screen.getByRole('button', { name: eintrag }));
+}
+
+/** Format und Ziel wählen, dann Speichern; das Menü schließt sich. */
+async function exportieren(format: string, ziel: string) {
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  await fireEvent.press(screen.getByRole('tab', { name: 'Export' }));
+  await fireEvent.press(screen.getByRole('button', { name: format }));
+  await fireEvent.press(screen.getByRole('button', { name: ziel }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(screen.queryByRole('tab', { name: 'Export' })).toBeNull());
 }
 
 test('Sichern: Datenbank in den gewählten Ordner, Rückmeldung mit Anzahl', async () => {
@@ -609,6 +626,7 @@ test('Sicherungshinweis: ohne Sicherung sichtbar, Antippen sichert, danach weg; 
   expect(Date.parse(db.getSetting('gesichert')!)).toBeGreaterThan(Date.now() - 60_000);
   expect(screen.queryByText(/Datensicherung · /)).toBeNull();
   await fireEvent.press(screen.getByLabelText('Menü'));
+  await fireEvent.press(screen.getByRole('tab', { name: 'Sicherung' }));
   expect(screen.getByText(`Zuletzt am ${new Date().toLocaleDateString('de-DE')}`)).toBeOnTheScreen();
 });
 
@@ -660,32 +678,41 @@ test('Einspielen: Abbruch, fremde Datei und Sicherung einer neueren Version', as
   expect(db.zaehlen()).toBe(0);
 });
 
-test('Tabelle: CSV und XLSX in den Ordner, XLSX ins Teilen-Blatt', async () => {
+test('Export: CSV und XLSX in den Ordner, XLSX ins Teilen-Blatt; Wahl und letzter Export gespeichert', async () => {
   db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  const { createFile, write } = ordner();
+  (Directory.pickDirectoryAsync as jest.Mock).mockRejectedValue(new Error('cancelled'));
   await render(<App />);
-  await menue('Als CSV speichern');
+  await exportieren('CSV', 'Ordner');
+  await act(() => new Promise((r) => setTimeout(r, 50)));
+  expect(alert).not.toHaveBeenCalled();
+  expect(db.getSetting('exportiert')).toBeNull();
+
+  const { createFile, write } = ordner();
+  await exportieren('CSV', 'Ordner');
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Gespeichert', '1 Messpunkte.'));
   expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.csv$/), 'text/csv');
   expect(write.mock.calls[0][0]).toContain('128');
 
-  await menue('Als XLSX speichern');
+  await exportieren('XLSX', 'Ordner');
   await waitFor(() => expect(alert).toHaveBeenCalledTimes(2));
   expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.xlsx$/), expect.stringContaining('spreadsheetml'));
   expect(write.mock.calls[1][0]).toBeInstanceOf(Uint8Array);
 
-  await menue('Als XLSX teilen');
+  await exportieren('XLSX', 'Teilen');
   await waitFor(() => expect(shareAsync).toHaveBeenCalledWith('file:///cache/datei', expect.objectContaining({ mimeType: expect.stringContaining('spreadsheetml') })));
   expect((File as unknown as jest.Mock).mock.calls.at(-1)).toEqual(['cache', expect.stringMatching(/^blutdruck-\d{4}-\d\d-\d\d\.xlsx$/)]);
+  expect([db.getSetting('exportformat'), db.getSetting('exportziel')]).toEqual(['xlsx', 'teilen']);
+  await fireEvent.press(screen.getByLabelText('Menü'));
+  expect(screen.getByText(`Zuletzt am ${new Date().toLocaleDateString('de-DE')}: XLSX · geteilt`)).toBeOnTheScreen();
 });
 
-test('Bericht: PDF über den Druckdienst in den Ordner', async () => {
+test('Export: PDF über den Druckdienst in den Ordner', async () => {
   db.insertMesspunkt({ zeit: FOTO.zeit.toISOString(), sys: 128, dia: 85, puls: 64 });
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   const { createFile, write } = ordner();
   await render(<App />);
-  await menue('Als PDF speichern');
+  await exportieren('PDF', 'Ordner');
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Gespeichert', '1 Messpunkte.'));
   expect((printToFileAsync as jest.Mock).mock.calls[0][0].html).toContain('128/85');
   expect(createFile).toHaveBeenLastCalledWith(expect.stringMatching(/\.pdf$/), 'application/pdf');

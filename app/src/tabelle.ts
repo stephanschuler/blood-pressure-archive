@@ -53,7 +53,7 @@ function tagesmittel(punkte: Messpunkt[]): Zelle[][] {
   ];
 }
 
-/** Blatt 1 wie csv(), die Zeit als Zahl mit Datumsformat, Sheets muss nichts raten; Blatt 2 Tagesmittel. */
+/** Blatt 1 Tagesmittel; Blatt 2 wie csv(), die Zeit als Zahl mit Datumsformat, Sheets muss nichts raten. */
 export function xlsx(punkte: Messpunkt[]): Uint8Array {
   const messpunkte: Zelle[][] = [
     ['Zeit', 'SYS', 'DIA', 'Puls'],
@@ -63,12 +63,12 @@ export function xlsx(punkte: Messpunkt[]): Uint8Array {
   const dateien: Record<string, string> = {
     '[Content_Types].xml': `<Types xmlns="${NS}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ${blattTyp}/><Override PartName="/xl/worksheets/sheet2.xml" ${blattTyp}/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
     '_rels/.rels': `<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-    'xl/workbook.xml': `<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="Messpunkte" sheetId="1" r:id="rId1"/><sheet name="Tagesmittel" sheetId="2" r:id="rId3"/></sheets></workbook>`,
+    'xl/workbook.xml': `<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="Tagesmittel" sheetId="1" r:id="rId1"/><sheet name="Messpunkte" sheetId="2" r:id="rId3"/></sheets></workbook>`,
     'xl/_rels/workbook.xml.rels': `<Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>`,
     // Excel verlangt beide Füllungen, auch wenn keine Zelle sie nutzt
     'xl/styles.xml': `<styleSheet xmlns="${NS}/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm"/><numFmt numFmtId="165" formatCode="yyyy-mm-dd"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="3"><xf/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="165" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
-    'xl/worksheets/sheet1.xml': blatt(17, messpunkte),
-    'xl/worksheets/sheet2.xml': blatt(11, tagesmittel(punkte)),
+    'xl/worksheets/sheet1.xml': blatt(11, tagesmittel(punkte)),
+    'xl/worksheets/sheet2.xml': blatt(17, messpunkte),
   };
   return zipSync(Object.fromEntries(Object.entries(dateien).map(([name, xml]) => [name, strToU8(KOPF + xml)])));
 }
